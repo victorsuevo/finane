@@ -33,6 +33,11 @@ export default function App() {
         fetch('/api/summary', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/goals', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
+      if (tRes.status === 401 || tRes.status === 403) {
+        logout();
+        return;
+      }
+
       const tData = await tRes.json();
       const sData = await sRes.json();
       const gData = await gRes.json();

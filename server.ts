@@ -12,21 +12,27 @@ const { Pool } = pkg;
 
 dotenv.config({ path: ".env.local" });
 
-const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret";
-const DATABASE_URL = process.env.DATABASE_URL;
+const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-stable-123";
+const DATABASE_URL = process.env.DATABASE_URL || process.env.database_url;
 
 // --- Database Wrapper ---
 let db_sqlite: any;
 let db_pg: any;
 
+console.log("🔍 Verificando variáveis de ambiente...");
+console.log("- DATABASE_URL:", DATABASE_URL ? "Definida (oculta)" : "NÃO DEFINIDA");
+console.log("- database_url:", process.env.database_url ? "Definida (oculta)" : "NÃO DEFINIDA");
+console.log("- GEMINI_API_KEY:", process.env.GEMINI_API_KEY ? "Definida" : "NÃO DEFINIDA");
+
 if (DATABASE_URL) {
-  console.log("🌐 Usando Banco de Dados: PostgreSQL (Supabase)");
+  console.log("🌐 Tentando conectar ao PostgreSQL (Supabase)...");
   db_pg = new Pool({
     connectionString: DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 10000,
   });
 } else {
-  console.log("📁 Usando Banco de Dados: SQLite Local");
+  console.log("📁 Usando Banco de Dados: SQLite Local (Aviso: Dados serão perdidos no Render)");
   db_sqlite = new Database("finance.db");
 }
 
@@ -58,6 +64,7 @@ async function query(sql: string, params: any[] = []) {
 
 // Initial Table Setup
 async function setupTables() {
+  console.log("🛠️ Iniciando configuração das tabelas...");
   const schema = `
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -83,14 +90,20 @@ async function setupTables() {
       deadline TEXT
     );
   `;
-  if (db_pg) {
-    await db_pg.query(schema);
-  } else {
-    db_sqlite.exec(schema.replace(/SERIAL/g, "INTEGER").replace(/PRIMARY KEY/g, "PRIMARY KEY AUTOINCREMENT"));
+  try {
+    if (db_pg) {
+      await db_pg.query(schema);
+      console.log("✅ Tabelas PostgreSQL verificadas/criadas com sucesso.");
+    } else {
+      db_sqlite.exec(schema.replace(/SERIAL/g, "INTEGER").replace(/PRIMARY KEY/g, "PRIMARY KEY AUTOINCREMENT"));
+      console.log("✅ Tabelas SQLite verificadas/criadas com sucesso.");
+    }
+  } catch (error) {
+    console.error("❌ ERRO AO CRIAR TABELAS:", error);
   }
 }
 
-setupTables();
+// Initial Table Setup called inside startServer
 
 async function startServer() {
   const app = express();
@@ -106,7 +119,11 @@ async function startServer() {
     if (!token) return res.status(401).json({ error: "Não autorizado" });
 
     jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
-      if (err) return res.status(403).json({ error: "Sessão expirada" });
+      if (err) {
+        console.error("🔐 Erro na verificação do token:", err.name, err.message);
+        const message = err.name === 'TokenExpiredError' ? "Sessão expirada" : "Token inválido ou expirado";
+        return res.status(403).json({ error: message, details: err.message });
+      }
       req.user = user;
       next();
     });
@@ -135,14 +152,35 @@ async function startServer() {
     try {
       const { rows } = await query("SELECT * FROM users WHERE email = ?", [email]);
       const user = rows[0];
-      if (!user || !(await bcrypt.compare(password, user.password))) {
-        return res.status(401).json({ error: "Credenciais inválidas" });
+      if (!user) {
+        return res.status(401).json({ error: "Usuário não encontrado" });
+      }
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: "Senha incorreta" });
       }
       const token = jwt.sign({ id: user.id, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
       res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
-    } catch (error) {
-      res.status(500).json({ error: "Erro ao fazer login" });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: "Erro ao fazer login", details: error.message });
     }
+  });
+
+  app.get("/api/health", async (req, res) => {
+    const status: any = {
+      db_type: db_pg ? "PostgreSQL" : "SQLite",
+      env: process.env.NODE_ENV,
+      time: new Date().toISOString(),
+    };
+    try {
+      await query("SELECT 1");
+      status.db_connection = "OK";
+    } catch (e: any) {
+      status.db_connection = "ERROR";
+      status.db_error = e.message;
+    }
+    res.json(status);
   });
 
   // --- API Routes ---
@@ -291,9 +329,14 @@ async function startServer() {
     }
   });
 
+  await setupTables();
+  
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`\n✅ FINANE ONLINE EM: http://0.0.0.0:${PORT}\n`);
   });
 }
 
-startServer();
+startServer().catch(err => {
+  console.error("🔥 FALHA CRÍTICA NO STARTUP:", err);
+  process.exit(1);
+});

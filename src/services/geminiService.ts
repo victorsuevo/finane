@@ -2,7 +2,8 @@ import { Transaction } from "../types";
 
 export async function getFinancialInsights(transactions: Transaction[]) {
   try {
-    const token = localStorage.getItem("jwt_token");
+    const token = localStorage.getItem("finane_token");
+    if (!token) return "Você precisa estar logado para ver insights.";
     const res = await fetch("/api/ai/insights", {
       method: 'POST',
       headers: { 
@@ -20,7 +21,8 @@ export async function getFinancialInsights(transactions: Transaction[]) {
 
 export async function chatWithAssistant(message: string, transactions: Transaction[]) {
   try {
-    const token = localStorage.getItem("jwt_token");
+    const token = localStorage.getItem("finane_token");
+    if (!token) return { error: "Sessão expirada", details: "Token não encontrado no navegador." };
     const res = await fetch("/api/ai/chat", {
       method: 'POST',
       headers: { 

@@ -4,6 +4,7 @@ import { MessageCircle, X, Send, Bot, User, Loader2 } from 'lucide-react';
 import { Transaction } from '../types';
 import { chatWithAssistant } from '../services/geminiService';
 import { cn } from '../lib/utils';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Message {
   role: 'assistant' | 'user';
@@ -21,6 +22,7 @@ export default function ChatAssistant({ transactions }: Props) {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const { logout } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -41,7 +43,15 @@ export default function ChatAssistant({ transactions }: Props) {
     const response = await chatWithAssistant(userMsg, transactions);
     
     if (typeof response === 'object' && 'error' in response) {
-      setMessages(prev => [...prev, { role: 'assistant', text: `Erro: ${response.details || response.error}` }]);
+      const isExpired = response.error?.toLowerCase().includes("expira") || 
+                        response.details?.toLowerCase().includes("expira");
+
+      if (isExpired) {
+        setMessages(prev => [...prev, { role: 'assistant', text: "Sua sessão expirou. Por favor, faça login novamente." }]);
+        setTimeout(logout, 3000);
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', text: `Erro: ${response.details || response.error}` }]);
+      }
     } else {
       setMessages(prev => [...prev, { role: 'assistant', text: response || 'Desculpe, não consegui processar isso.' }]);
     }
