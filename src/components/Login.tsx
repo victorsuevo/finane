@@ -47,6 +47,9 @@ export default function Login() {
       
       login(data.token, data.user);
     } catch (err: any) {
+      console.error('Login error:', err);
+      localStorage.removeItem('finane_token');
+      localStorage.removeItem('finane_user');
       setError(err.message);
     } finally {
       setLoading(false);

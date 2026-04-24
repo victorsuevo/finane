@@ -2,8 +2,12 @@ import { Transaction } from "../types";
 
 export async function getFinancialInsights(transactions: Transaction[]) {
   try {
-    const token = localStorage.getItem("finane_token");
+    let token = localStorage.getItem("finane_token");
     if (!token) return "Você precisa estar logado para ver insights.";
+    
+    // Clean token (remove quotes if present)
+    token = token.replace(/^"(.*)"$/, '$1');
+    
     const res = await fetch("/api/ai/insights", {
       method: 'POST',
       headers: { 
