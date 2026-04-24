@@ -40,7 +40,11 @@ export default function ChatAssistant({ transactions }: Props) {
 
     const response = await chatWithAssistant(userMsg, transactions);
     
-    setMessages(prev => [...prev, { role: 'assistant', text: response || 'Desculpe, não consegui processar isso.' }]);
+    if (typeof response === 'object' && 'error' in response) {
+      setMessages(prev => [...prev, { role: 'assistant', text: `Erro: ${response.details || response.error}` }]);
+    } else {
+      setMessages(prev => [...prev, { role: 'assistant', text: response || 'Desculpe, não consegui processar isso.' }]);
+    }
     setLoading(false);
   };
 

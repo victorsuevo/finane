@@ -30,8 +30,9 @@ export async function chatWithAssistant(message: string, transactions: Transacti
       body: JSON.stringify({ message, transactions })
     });
     const data = await res.json();
+    if (!res.ok) return data;
     return data.text || "Ops, tive um probleminha para processar sua pergunta.";
   } catch (error) {
-    return "Erro ao conectar com o assistente.";
+    return { error: "Erro de conexão", details: "Não foi possível falar com o servidor." };
   }
 }

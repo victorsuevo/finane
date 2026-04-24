@@ -247,23 +247,31 @@ async function startServer() {
 
   app.post("/api/ai/chat", authenticateToken, async (req: any, res) => {
     const { message, transactions } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return res.status(500).json({ error: "Configuração ausente: GEMINI_API_KEY não encontrada no servidor." });
+    }
+
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
       
       const prompt = `
-        Você é o "Finane", um assistente financeiro inteligente e amigável.
-        Responda sempre em Português do Brasil. Seja breve e direto.
-        Contexto do Usuário (Transações): ${JSON.stringify(transactions.slice(0, 50))}
-        
-        Pergunta do Usuário: ${message}
+        Você é o "Finane", um assistente financeiro.
+        Contexto do Usuário: ${JSON.stringify(transactions.slice(0, 30))}
+        Pergunta: ${message}
       `;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
-      res.json({ text: response.text() });
-    } catch (error) {
+      const text = response.text();
+      res.json({ text });
+    } catch (error: any) {
       console.error("AI Error:", error);
-      res.status(500).json({ error: "Erro ao processar IA" });
+      res.status(500).json({ 
+        error: "Erro na IA", 
+        details: error.message?.includes("API key") ? "Chave de API inválida" : error.message 
+      });
     }
   });
 
