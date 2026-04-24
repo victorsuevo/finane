@@ -190,6 +190,48 @@ async function startServer() {
     });
   }
 
+  // --- AI Routes ---
+  const { GoogleGenerativeAI } = await import("@google/genai");
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+
+  app.post("/api/ai/chat", authenticateToken, async (req: any, res) => {
+    const { message, transactions } = req.body;
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      
+      const prompt = `
+        Você é o "Finane", um assistente financeiro inteligente e amigável.
+        Responda sempre em Português do Brasil. Seja breve e direto.
+        Contexto do Usuário (Transações): ${JSON.stringify(transactions.slice(0, 50))}
+        
+        Pergunta do Usuário: ${message}
+      `;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      res.json({ text: response.text() });
+    } catch (error) {
+      console.error("AI Error:", error);
+      res.status(500).json({ error: "Erro ao processar IA" });
+    }
+  });
+
+  app.post("/api/ai/insights", authenticateToken, async (req: any, res) => {
+    const { transactions } = req.body;
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const prompt = `
+        Aja como um consultor financeiro. Analise estas transações e dê 3 dicas curtas:
+        ${JSON.stringify(transactions.slice(0, 50))}
+      `;
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      res.json({ text: response.text() });
+    } catch (error) {
+      res.status(500).json({ error: "Erro nos insights" });
+    }
+  });
+
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`\n✅ FINANE ONLINE EM: http://0.0.0.0:${PORT}\n`);
   });
