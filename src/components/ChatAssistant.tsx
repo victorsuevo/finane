@@ -83,7 +83,7 @@ export default function ChatAssistant({ transactions }: Props) {
             <div className="p-4 bg-indigo-600 text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Bot size={20} />
-                <span className="font-bold text-sm">Assistente Finane</span>
+                <span className="font-bold text-sm">Assistente SUEVO</span>
               </div>
               <button onClick={() => setIsOpen(false)} className="p-1 hover:bg-white/20 rounded-lg transition-colors">
                 <X size={20} />

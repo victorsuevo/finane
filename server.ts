@@ -301,34 +301,16 @@ async function startServer() {
     }
 
     try {
-      let model;
       const prompt = `
-        Você é o "Finane", um assistente financeiro.
+        Você é o "SUEVO", um assistente financeiro.
         Contexto do Usuário: ${JSON.stringify(transactions.slice(0, 30))}
         Pergunta: ${message}
       `;
 
-      let text = "";
-      try {
-        console.log("🤖 Tentando IA (v1) com gemini-1.5-flash...");
-        model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: 'v1' });
-        const result = await model.generateContent(prompt);
-        text = result.response.text();
-      } catch (err1: any) {
-        console.warn("⚠️ Falha gemini-1.5-flash (v1), tentando gemini-pro (v1)...", err1.message);
-        try {
-          model = genAI.getGenerativeModel({ model: "gemini-pro" }, { apiVersion: 'v1' });
-          const result = await model.generateContent(prompt);
-          text = result.response.text();
-        } catch (err2: any) {
-          console.warn("⚠️ Falha gemini-pro (v1), tentando v1beta...", err2.message);
-          model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-          const result = await model.generateContent(prompt);
-          text = result.response.text();
-        }
-      }
-      
-      res.json({ text });
+      console.log("🤖 Tentando IA com gemini-1.5-flash...");
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(prompt);
+      res.json({ text: result.response.text() });
     } catch (error: any) {
       console.error("AI Error:", error);
       res.status(500).json({ 
@@ -345,17 +327,9 @@ async function startServer() {
         Aja como um consultor financeiro. Analise estas transações e dê 3 dicas curtas:
         ${JSON.stringify(transactions.slice(0, 50))}
       `;
-      let text = "";
-      try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: 'v1' });
-        const result = await model.generateContent(prompt);
-        text = result.response.text();
-      } catch (err) {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent(prompt);
-        text = result.response.text();
-      }
-      res.json({ text });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const result = await model.generateContent(prompt);
+      res.json({ text: result.response.text() });
     } catch (error) {
       res.status(500).json({ error: "Erro nos insights" });
     }

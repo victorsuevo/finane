@@ -81,7 +81,7 @@ export default function App() {
           <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20">
             <Wallet className="text-white" size={18} />
           </div>
-          <h1 className="font-black text-lg tracking-tight uppercase">FINANE</h1>
+          <h1 className="font-black text-lg tracking-tight uppercase">SUEVO</h1>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex flex-col items-end">
