@@ -7,6 +7,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import pkg from 'pg';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 const { Pool } = pkg;
 
 dotenv.config({ path: ".env.local" });
@@ -242,7 +243,6 @@ async function startServer() {
   }
 
   // --- AI Routes ---
-  const { GoogleGenerativeAI } = await import("@google/genai");
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
   app.post("/api/ai/chat", authenticateToken, async (req: any, res) => {
