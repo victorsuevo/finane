@@ -308,7 +308,7 @@ async function startServer() {
       `;
 
       console.log("🤖 Tentando IA via Fetch Direto (v1)...");
-      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
       
       const response = await fetch(url, {
         method: 'POST',
@@ -342,7 +342,7 @@ async function startServer() {
         Aja como um consultor financeiro. Analise estas transações e dê 3 dicas curtas:
         ${JSON.stringify(transactions.slice(0, 50))}
       `;
-      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
