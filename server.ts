@@ -307,10 +307,25 @@ async function startServer() {
         Pergunta: ${message}
       `;
 
-      console.log("🤖 Tentando IA com gemini-1.5-flash...");
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const result = await model.generateContent(prompt);
-      res.json({ text: result.response.text() });
+      console.log("🤖 Tentando IA via Fetch Direto (v1)...");
+      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error?.message || "Erro na API do Google");
+      }
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui processar isso.";
+      res.json({ text });
     } catch (error: any) {
       console.error("AI Error:", error);
       res.status(500).json({ 
@@ -327,9 +342,16 @@ async function startServer() {
         Aja como um consultor financeiro. Analise estas transações e dê 3 dicas curtas:
         ${JSON.stringify(transactions.slice(0, 50))}
       `;
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const result = await model.generateContent(prompt);
-      res.json({ text: result.response.text() });
+      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+      const data = await response.json();
+      res.json({ text: data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem insights no momento." });
     } catch (error) {
       res.status(500).json({ error: "Erro nos insights" });
     }
