@@ -8,20 +8,27 @@ import { useAuth } from '../contexts/AuthContext';
 interface Props {
   onSuccess: () => void;
   onClose: () => void;
+  initialType?: 'income' | 'expense';
 }
 
-const CATEGORIES = [
-  'Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Educação', 'Moradia', 'Salário', 'Outros'
+const INCOME_CATEGORIES = [
+  'Salário', 'Investimentos', 'Presente', 'Venda', 'Freelance', 'Outros'
 ];
 
-export default function TransactionForm({ onSuccess, onClose }: Props) {
+const EXPENSE_CATEGORIES = [
+  'Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Educação', 'Moradia', 'Mercado', 'Assinaturas', 'Outros'
+];
+
+export default function TransactionForm({ onSuccess, onClose, initialType = 'expense' }: Props) {
   const [amount, setAmount] = useState('');
-  const [type, setType] = useState<'income' | 'expense'>('expense');
-  const [category, setCategory] = useState('Outros');
+  const [type, setType] = useState<'income' | 'expense'>(initialType);
+  const [category, setCategory] = useState(type === 'income' ? 'Salário' : 'Outros');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const { token } = useAuth();
+
+  const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,7 +129,7 @@ export default function TransactionForm({ onSuccess, onClose }: Props) {
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full bg-transparent border-none text-sm font-bold text-slate-900 focus:ring-0 p-0"
                 >
-                  {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">

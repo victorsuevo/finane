@@ -21,8 +21,11 @@ export async function getFinancialInsights(transactions: Transaction[]) {
 
 export async function chatWithAssistant(message: string, transactions: Transaction[]) {
   try {
-    const token = localStorage.getItem("finane_token");
+    let token = localStorage.getItem("finane_token");
     if (!token) return { error: "Sessão expirada", details: "Token não encontrado no navegador." };
+    
+    // Clean token (remove quotes if present)
+    token = token.replace(/^"(.*)"$/, '$1');
     const res = await fetch("/api/ai/chat", {
       method: 'POST',
       headers: { 

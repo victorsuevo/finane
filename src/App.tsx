@@ -22,6 +22,7 @@ export default function App() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [summary, setSummary] = useState<Summary>({ totalIncome: 0, totalExpense: 0 });
   const [showForm, setShowForm] = useState(false);
+  const [formType, setFormType] = useState<'income' | 'expense'>('expense');
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -111,18 +112,28 @@ export default function App() {
 
         {/* Summary Grid - Bento Style */}
         <div className="px-5 grid grid-cols-2 gap-3">
-          <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100/50">
+          <motion.div 
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => { setFormType('income'); setShowForm(true); }}
+            className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100/50 cursor-pointer transition-all hover:shadow-lg hover:shadow-emerald-500/10"
+          >
             <p className="text-[10px] text-emerald-600 font-bold uppercase mb-1">Entradas</p>
             <p className="text-lg font-bold text-emerald-700 font-mono">
               + {formatCurrency(summary.totalIncome || 0)}
             </p>
-          </div>
-          <div className="bg-rose-50 p-4 rounded-2xl border border-rose-100/50">
+          </motion.div>
+          <motion.div 
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => { setFormType('expense'); setShowForm(true); }}
+            className="bg-rose-50 p-4 rounded-2xl border border-rose-100/50 cursor-pointer transition-all hover:shadow-lg hover:shadow-rose-500/10"
+          >
             <p className="text-[10px] text-rose-600 font-bold uppercase mb-1">Saídas</p>
             <p className="text-lg font-bold text-rose-700 font-mono">
               - {formatCurrency(summary.totalExpense || 0)}
             </p>
-          </div>
+          </motion.div>
         </div>
 
         <CategoryChart transactions={transactions} />
@@ -157,7 +168,7 @@ export default function App() {
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => setShowForm(true)}
+        onClick={() => { setFormType('expense'); setShowForm(true); }}
         className="fixed bottom-8 right-8 w-14 h-14 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl shadow-2xl z-50 flex items-center justify-center transition-colors"
       >
         <Plus size={28} />
@@ -168,6 +179,7 @@ export default function App() {
       {/* Forms Overlay */}
       {showForm && (
         <TransactionForm 
+          initialType={formType}
           onSuccess={() => {
             fetchData();
             setShowForm(false);
