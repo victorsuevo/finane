@@ -281,13 +281,22 @@ async function startServer() {
   }
 
   // --- AI Routes ---
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+  const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || "").trim();
+  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+  app.get("/api/ai/models", authenticateToken, async (req, res) => {
+    try {
+      // Note: The SDK doesn't have a direct listModels, but we can try a dummy call
+      res.json({ message: "Endpoint para debug", key_length: GEMINI_API_KEY.length });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   app.post("/api/ai/chat", authenticateToken, async (req: any, res) => {
     const { message, transactions } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY;
-
-    if (!apiKey) {
+    
+    if (!GEMINI_API_KEY) {
       return res.status(500).json({ error: "Configuração ausente: GEMINI_API_KEY não encontrada no servidor." });
     }
 
@@ -301,13 +310,13 @@ async function startServer() {
 
       let text = "";
       try {
-        console.log("🤖 Tentando IA com gemini-1.5-flash...");
-        model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        console.log("🤖 Tentando IA (v1) com gemini-1.5-flash...");
+        model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: 'v1' });
         const result = await model.generateContent(prompt);
         text = result.response.text();
       } catch (err1: any) {
-        console.warn("⚠️ Falha no gemini-1.5-flash, tentando gemini-pro...", err1.message);
-        model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        console.warn("⚠️ Falha v1, tentando fallback v1beta gemini-1.5-flash...", err1.message);
+        model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent(prompt);
         text = result.response.text();
       }
@@ -331,11 +340,11 @@ async function startServer() {
       `;
       let text = "";
       try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: 'v1' });
         const result = await model.generateContent(prompt);
         text = result.response.text();
       } catch (err) {
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const result = await model.generateContent(prompt);
         text = result.response.text();
       }
