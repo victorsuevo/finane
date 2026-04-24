@@ -6,42 +6,90 @@ import fs from "fs";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import pkg from 'pg';
+const { Pool } = pkg;
 
 dotenv.config({ path: ".env.local" });
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret";
+const DATABASE_URL = process.env.DATABASE_URL;
 
-// Database Setup
-const db = new Database("finance.db");
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL
-  );
+// --- Database Wrapper ---
+let db_sqlite: any;
+let db_pg: any;
 
-  CREATE TABLE IF NOT EXISTS transactions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    amount REAL NOT NULL,
-    category TEXT NOT NULL,
-    description TEXT,
-    date TEXT NOT NULL,
-    type TEXT CHECK(type IN ('income', 'expense')) NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  );
+if (DATABASE_URL) {
+  console.log("🌐 Usando Banco de Dados: PostgreSQL (Supabase)");
+  db_pg = new Pool({
+    connectionString: DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  });
+} else {
+  console.log("📁 Usando Banco de Dados: SQLite Local");
+  db_sqlite = new Database("finance.db");
+}
 
-  CREATE TABLE IF NOT EXISTS goals (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    target_amount REAL NOT NULL,
-    current_amount REAL DEFAULT 0,
-    deadline TEXT,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  );
-`);
+async function query(sql: string, params: any[] = []) {
+  if (db_pg) {
+    let pgSql = sql;
+    let paramCount = 1;
+    pgSql = pgSql.replace(/\?/g, () => `$${paramCount++}`);
+    
+    // Add RETURNING id to inserts for PG
+    if (pgSql.trim().toLowerCase().startsWith("insert")) {
+      pgSql += " RETURNING id";
+    }
+
+    const res = await db_pg.query(pgSql, params);
+    return { 
+      rows: res.rows, 
+      lastInsertRowid: res.rows[0]?.id,
+      changes: res.rowCount 
+    };
+  }
+  const stmt = db_sqlite.prepare(sql);
+  if (sql.trim().toLowerCase().startsWith("select")) {
+    return { rows: stmt.all(...params) };
+  }
+  const info = stmt.run(...params);
+  return { lastInsertRowid: info.lastInsertRowid, changes: info.changes };
+}
+
+// Initial Table Setup
+async function setupTables() {
+  const schema = `
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS transactions (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      category TEXT NOT NULL,
+      description TEXT,
+      date TEXT NOT NULL,
+      type TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS goals (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      target_amount REAL NOT NULL,
+      current_amount REAL DEFAULT 0,
+      deadline TEXT
+    );
+  `;
+  if (db_pg) {
+    await db_pg.query(schema);
+  } else {
+    db_sqlite.exec(schema.replace(/SERIAL/g, "INTEGER").replace(/PRIMARY KEY/g, "PRIMARY KEY AUTOINCREMENT"));
+  }
+}
+
+setupTables();
 
 async function startServer() {
   const app = express();
@@ -68,12 +116,12 @@ async function startServer() {
     const { name, email, password } = req.body;
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
-      const info = db.prepare("INSERT INTO users (name, email, password) VALUES (?, ?, ?)").run(name, email, hashedPassword);
+      const info = await query("INSERT INTO users (name, email, password) VALUES (?, ?, ?)", [name, email, hashedPassword]);
       const userId = info.lastInsertRowid;
       const token = jwt.sign({ id: userId, email, name }, JWT_SECRET, { expiresIn: '7d' });
       res.json({ token, user: { id: userId, name, email } });
     } catch (error: any) {
-      if (error.message.includes("UNIQUE constraint failed")) {
+      if (error.message.includes("UNIQUE") || error.code === '23505') {
         res.status(400).json({ error: "E-mail já cadastrado" });
       } else {
         res.status(500).json({ error: "Erro ao registrar usuário" });
@@ -84,7 +132,8 @@ async function startServer() {
   app.post("/api/auth/login", async (req, res) => {
     const { email, password } = req.body;
     try {
-      const user: any = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+      const { rows } = await query("SELECT * FROM users WHERE email = ?", [email]);
+      const user = rows[0];
       if (!user || !(await bcrypt.compare(password, user.password))) {
         return res.status(401).json({ error: "Credenciais inválidas" });
       }
@@ -96,45 +145,46 @@ async function startServer() {
   });
 
   // --- API Routes ---
-  app.get("/api/transactions", authenticateToken, (req: any, res) => {
+  app.get("/api/transactions", authenticateToken, async (req: any, res) => {
     try {
-      const transactions = db.prepare("SELECT * FROM transactions WHERE user_id = ? ORDER BY date DESC").all(req.user.id);
-      res.json(transactions);
+      const { rows } = await query("SELECT * FROM transactions WHERE user_id = ? ORDER BY date DESC", [req.user.id]);
+      res.json(rows);
     } catch (error) {
       res.status(500).json({ error: "Erro ao buscar transações" });
     }
   });
 
-  app.get("/api/summary", authenticateToken, (req: any, res) => {
+  app.get("/api/summary", authenticateToken, async (req: any, res) => {
     try {
-      const summary = db.prepare(`
+      const { rows } = await query(`
         SELECT 
-          SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as totalIncome,
-          SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as totalExpense
+          SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as "totalIncome",
+          SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as "totalExpense"
         FROM transactions
         WHERE user_id = ?
-      `).get(req.user.id);
-      res.json(summary || { totalIncome: 0, totalExpense: 0 });
+      `, [req.user.id]);
+      res.json(rows[0] || { totalIncome: 0, totalExpense: 0 });
     } catch (error) {
       res.status(500).json({ error: "Erro interno" });
     }
   });
 
-  app.post("/api/transactions", authenticateToken, (req: any, res) => {
+  app.post("/api/transactions", authenticateToken, async (req: any, res) => {
     const { amount, category, description, date, type } = req.body;
     try {
-      const info = db.prepare(
-        "INSERT INTO transactions (user_id, amount, category, description, date, type) VALUES (?, ?, ?, ?, ?, ?)"
-      ).run(req.user.id, amount, category, description, date, type);
-      res.json({ id: parseInt(info.lastInsertRowid.toString()) });
+      const info = await query(
+        "INSERT INTO transactions (user_id, amount, category, description, date, type) VALUES (?, ?, ?, ?, ?, ?)",
+        [req.user.id, amount, category, description, date, type]
+      );
+      res.json({ id: info.lastInsertRowid });
     } catch (error) {
       res.status(500).json({ error: "Erro ao salvar transação" });
     }
   });
 
-  app.delete("/api/transactions/:id", authenticateToken, (req: any, res) => {
+  app.delete("/api/transactions/:id", authenticateToken, async (req: any, res) => {
     try {
-      db.prepare("DELETE FROM transactions WHERE id = ? AND user_id = ?").run(req.params.id, req.user.id);
+      await query("DELETE FROM transactions WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Erro ao deletar" });
@@ -142,22 +192,23 @@ async function startServer() {
   });
 
   // --- Goals Routes ---
-  app.get("/api/goals", authenticateToken, (req: any, res) => {
+  app.get("/api/goals", authenticateToken, async (req: any, res) => {
     try {
-      const goals = db.prepare("SELECT * FROM goals WHERE user_id = ?").all(req.user.id);
-      res.json(goals);
+      const { rows } = await query("SELECT * FROM goals WHERE user_id = ?", [req.user.id]);
+      res.json(rows);
     } catch (error) {
       res.status(500).json({ error: "Erro ao buscar metas" });
     }
   });
 
-  app.post("/api/goals", authenticateToken, (req: any, res) => {
+  app.post("/api/goals", authenticateToken, async (req: any, res) => {
     const { name, target_amount, current_amount, deadline } = req.body;
     try {
-      const info = db.prepare(
-        "INSERT INTO goals (user_id, name, target_amount, current_amount, deadline) VALUES (?, ?, ?, ?, ?)"
-      ).run(req.user.id, name, target_amount, current_amount || 0, deadline);
-      res.json({ id: parseInt(info.lastInsertRowid.toString()) });
+      const info = await query(
+        "INSERT INTO goals (user_id, name, target_amount, current_amount, deadline) VALUES (?, ?, ?, ?, ?)",
+        [req.user.id, name, target_amount, current_amount || 0, deadline]
+      );
+      res.json({ id: info.lastInsertRowid });
     } catch (error) {
       res.status(500).json({ error: "Erro ao salvar meta" });
     }
