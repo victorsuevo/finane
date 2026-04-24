@@ -315,10 +315,17 @@ async function startServer() {
         const result = await model.generateContent(prompt);
         text = result.response.text();
       } catch (err1: any) {
-        console.warn("⚠️ Falha v1, tentando fallback v1beta gemini-1.5-flash...", err1.message);
-        model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent(prompt);
-        text = result.response.text();
+        console.warn("⚠️ Falha gemini-1.5-flash (v1), tentando gemini-pro (v1)...", err1.message);
+        try {
+          model = genAI.getGenerativeModel({ model: "gemini-pro" }, { apiVersion: 'v1' });
+          const result = await model.generateContent(prompt);
+          text = result.response.text();
+        } catch (err2: any) {
+          console.warn("⚠️ Falha gemini-pro (v1), tentando v1beta...", err2.message);
+          model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+          const result = await model.generateContent(prompt);
+          text = result.response.text();
+        }
       }
       
       res.json({ text });
