@@ -292,7 +292,7 @@ async function startServer() {
     }
 
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
       
       const prompt = `
         Você é o "Finane", um assistente financeiro.
@@ -316,7 +316,7 @@ async function startServer() {
   app.post("/api/ai/insights", authenticateToken, async (req: any, res) => {
     const { transactions } = req.body;
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
       const prompt = `
         Aja como um consultor financeiro. Analise estas transações e dê 3 dicas curtas:
         ${JSON.stringify(transactions.slice(0, 50))}
