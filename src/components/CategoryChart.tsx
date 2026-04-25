@@ -77,6 +77,7 @@ export default function CategoryChart({ transactions, currentMonth, investments 
     
     const monthMap = {} as Record<string, number>;
     sortedTxs.forEach(t => {
+      if (!t.date || t.date.length < 7) return;
       const m = t.date.substring(0, 7);
       const val = t.type === 'income' ? t.amount : -t.amount;
       monthMap[m] = (monthMap[m] || 0) + val;
