@@ -5,7 +5,8 @@ import {
   CartesianGrid, Legend
 } from 'recharts';
 import { Transaction, Investment } from '../types';
-import { format, subMonths, parseISO, ptBR } from 'date-fns';
+import { format, subMonths, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, ChevronRight, BarChart3, LineChart as LineIcon, PieChart as PieIcon, AreaChart as AreaIcon, Layers, Wallet } from 'lucide-react';
 
