@@ -61,7 +61,7 @@ export default function GoalList({ goals, onAdd, onRefresh, onEdit }: Props) {
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isComplete ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600' : 'bg-indigo-50 dark:bg-indigo-950 text-indigo-600'}`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isComplete ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-600' : 'bg-rose-50 dark:bg-rose-950 text-rose-600'}`}>
                     <Target size={20} />
                   </div>
                   <div>

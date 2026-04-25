@@ -41,13 +41,13 @@ export default function ShareSummary({ summary, transactions, goals = [], userNa
     report += `🗓️ ${dateStr}\n\n`;
 
     report += `💼 *SALDO GERAL*\n`;
-    report += `In: ${formatCurrency(summary.totalIncome || 0)}\n`;
-    report += `Out: ${formatCurrency(summary.totalExpense || 0)}\n`;
+    report += `Entrada: ${formatCurrency(summary.totalIncome || 0)}\n`;
+    report += `Saída:   ${formatCurrency(summary.totalExpense || 0)}\n`;
     report += `✅ *Total: ${formatCurrency(balance)}*\n\n`;
 
     report += `📅 *${monthName.toUpperCase()}*\n`;
-    report += `Entradas: ${formatCurrency(monthIncome)}\n`;
-    report += `Saídas: ${formatCurrency(monthExpense)}\n`;
+    report += `Entrada: ${formatCurrency(monthIncome)}\n`;
+    report += `Saída:   ${formatCurrency(monthExpense)}\n`;
     report += `${monthBalance >= 0 ? '🟢' : '🔴'} Balanço: ${formatCurrency(monthBalance)}\n\n`;
 
     if (goals.length > 0) {
@@ -56,17 +56,20 @@ export default function ShareSummary({ summary, transactions, goals = [], userNa
         const pct = Math.min(Math.round((g.current_amount / g.target_amount) * 100), 100);
         const bar = '█'.repeat(Math.floor(pct / 10)) + '░'.repeat(10 - Math.floor(pct / 10));
         report += `🏆 ${g.name} (${pct}%)\n`;
-        report += `[${bar}] ${formatCurrency(g.current_amount)}\n`;
+        report += `[${bar}] ${formatCurrency(g.current_amount)} / ${formatCurrency(g.target_amount)}\n`;
       });
       report += `\n`;
     }
 
-    const installmentTx = transactions.filter(t => t.installments && t.installments > 1 && t.installment_ref == null);
-    if (installmentTx.length > 0) {
-      report += `💳 *PARCELAS ATIVAS*\n`;
-      installmentTx.slice(0, 5).forEach(t => {
+    const monthInstallments = monthTx.filter(t => t.installments && t.installments > 1);
+    if (monthInstallments.length > 0) {
+      report += `💳 *PARCELAS DE ${format(currentMonthDate, 'MMM', { locale: ptBR }).toUpperCase()}*\n`;
+      monthInstallments.forEach(t => {
+        // Extract "4/12" from description if possible
+        const instMatch = t.description?.match(/\((\d+\/\d+)\)/);
+        const instInfo = instMatch ? instMatch[1] : `${t.installments}x`;
         const cleanDesc = t.description?.split(' (')[0] || t.category;
-        report += `• ${cleanDesc}: ${formatCurrency(t.amount)} (${t.installments}x)\n`;
+        report += `• ${cleanDesc}: ${formatCurrency(t.amount)} (${instInfo})\n`;
       });
       report += `\n`;
     }
