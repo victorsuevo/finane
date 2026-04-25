@@ -37,9 +37,13 @@ export default function TransactionForm({
 }: Props) {
   const [amount, setAmount] = useState(editTransaction ? editTransaction.amount.toString() : '');
   const [type, setType] = useState<'income' | 'expense'>(editTransaction ? editTransaction.type : initialType);
-  const [category, setCategory] = useState(
-    editTransaction ? editTransaction.category : (initialType === 'income' ? 'Salário' : 'Outros')
-  );
+  const [category, setCategory] = useState(() => {
+    if (editTransaction) {
+      if (editTransaction.goal_id) return `${GOAL_PREFIX}${editTransaction.goal_id}`;
+      return editTransaction.category;
+    }
+    return initialType === 'income' ? 'Salário' : 'Outros';
+  });
   const [description, setDescription] = useState(editTransaction ? (editTransaction.description || '') : '');
   const [date, setDate] = useState(() => {
     if (editTransaction) return editTransaction.date;
@@ -131,7 +135,7 @@ export default function TransactionForm({
       >
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-            Nova Transação
+            {editTransaction ? 'Editar Transação' : 'Nova Transação'}
           </h2>
           <button
             onClick={onClose}
@@ -284,8 +288,8 @@ export default function TransactionForm({
             </div>
           )}
 
-          {/* ── Installments (expense only, not goal) ── */}
-          {type === 'expense' && !isGoalCategory && (
+          {/* ── Installments (expense only) ── */}
+          {type === 'expense' && (
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-3">
                 <CreditCard size={11} /> {editTransaction ? 'Ajustar Parcelas' : 'Parcelas'}
