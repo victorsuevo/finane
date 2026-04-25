@@ -114,7 +114,6 @@ export default function HelpModal({ isOpen, onClose }: Props) {
 
             <div className="p-8 bg-slate-50 dark:bg-slate-800/50 text-center border-t border-slate-100 dark:border-slate-700">
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">SUEVO Financial Ecosystem &copy; 2026</p>
-            </div>ncial Ecosystem &copy; 2026</p>
             </div>
           </motion.div>
         </div>
