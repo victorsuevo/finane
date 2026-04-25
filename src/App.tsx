@@ -227,7 +227,7 @@ export default function App() {
           </motion.div>
         </div>
 
-        <CategoryChart transactions={monthTransactions} />
+        <CategoryChart transactions={transactions} currentMonth={selectedMonth} />
 
         <GoalList
           goals={goals}
