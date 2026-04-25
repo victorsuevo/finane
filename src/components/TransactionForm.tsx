@@ -50,7 +50,7 @@ export default function TransactionForm({
     if (today.startsWith(defaultDate)) return today;
     return `${defaultDate}-01`;
   });
-  const [installments, setInstallments] = useState(1);
+  const [installments, setInstallments] = useState(editTransaction ? editTransaction.installments : 1);
   const [loading, setLoading] = useState(false);
   const { token } = useAuth();
 
@@ -277,10 +277,10 @@ export default function TransactionForm({
           )}
 
           {/* ── Installments (expense only, not goal) ── */}
-          {!editTransaction && type === 'expense' && !isGoalCategory && (
+          {type === 'expense' && !isGoalCategory && (
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-3">
-                <CreditCard size={11} /> Parcelas
+                <CreditCard size={11} /> {editTransaction ? 'Ajustar Parcelas' : 'Parcelas'}
               </label>
               <div className="flex items-center gap-3 flex-wrap">
                 <button
@@ -306,6 +306,11 @@ export default function TransactionForm({
                   </span>
                 )}
               </div>
+              {editTransaction && (editTransaction.installments > 1 || editTransaction.installment_ref) && (
+                <p className="mt-3 text-[9px] text-amber-600 font-bold uppercase tracking-tight">
+                  ⚠️ Alterar parcelas excluirá a série antiga e gerará uma nova.
+                </p>
+              )}
             </div>
           )}
 
@@ -328,24 +333,54 @@ export default function TransactionForm({
           </div>
 
           {/* ── Submit ── */}
-          <button
-            type="submit"
-            disabled={loading}
-            className={cn(
-              'w-full py-5 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl transition-all disabled:opacity-50',
-              isGoalCategory
-                ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20'
-                : 'bg-slate-900 hover:bg-black'
+          <div className="space-y-3">
+            <button
+              type="submit"
+              disabled={loading}
+              className={cn(
+                'w-full py-5 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl transition-all disabled:opacity-50',
+                isGoalCategory
+                  ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20'
+                  : 'bg-slate-900 hover:bg-black'
+              )}
+            >
+              {loading
+                ? 'Processando...'
+                : installments > 1
+                ? (editTransaction ? `Atualizar Série (${installments}×)` : `Parcelar em ${installments}×`)
+                : isGoalCategory
+                ? `Aportar para "${selectedGoal?.name}"`
+                : (editTransaction ? 'Salvar Alterações' : 'Confirmar Transação')}
+            </button>
+
+            {editTransaction && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (window.confirm('Deseja excluir esta transação? Se for parcelada, toda a série será removida.')) {
+                    setLoading(true);
+                    try {
+                      const res = await fetch(`/api/transactions/${editTransaction.id}`, {
+                        method: 'DELETE',
+                        headers: { Authorization: `Bearer ${token}` }
+                      });
+                      if (res.ok) {
+                        onSuccess();
+                        onClose();
+                      }
+                    } catch (err) {
+                      console.error(err);
+                    } finally {
+                      setLoading(false);
+                    }
+                  }
+                }}
+                className="w-full py-4 text-rose-500 font-bold text-xs uppercase tracking-widest hover:bg-rose-50 rounded-[1.5rem] transition-colors"
+              >
+                Excluir {editTransaction.installments > 1 || editTransaction.installment_ref ? 'Série Completa' : 'Transação'}
+              </button>
             )}
-          >
-            {loading
-              ? 'Processando...'
-              : installments > 1
-              ? `Parcelar em ${installments}×`
-              : isGoalCategory
-              ? `Aportar para "${selectedGoal?.name}"`
-              : 'Confirmar Transação'}
-          </button>
+          </div>
         </form>
       </motion.div>
     </motion.div>

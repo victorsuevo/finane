@@ -348,15 +348,90 @@ async function startServer() {
   });
 
   app.put("/api/transactions/:id", authenticateToken, async (req: any, res) => {
-    const { amount, category, description, date, type } = req.body;
+    const { amount, category, description, date, type, installments: newInstallments, goal_id } = req.body;
+    const totalInstallments = parseInt(newInstallments) || 1;
+
     try {
-      // Simplification: Not recalculating goals/installments logic for edits yet
+      // 1. Fetch the existing transaction to see if it's part of a series
+      const { rows: existing } = await query("SELECT * FROM transactions WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
+      const t = existing[0];
+      if (!t) return res.status(404).json({ error: "Transação não encontrada" });
+
+      const isSeries = t.installments > 1 || t.installment_ref;
+      const parentId = t.installment_ref || t.id;
+
+      if (isSeries) {
+        // --- Cascade Edit: Delete old series and recreate ---
+        
+        // Find all members to revert goals
+        const { rows: series } = await query(
+          "SELECT * FROM transactions WHERE (id = ? OR installment_ref = ?) AND user_id = ?",
+          [parentId, parentId, req.user.id]
+        );
+
+        for (const item of series) {
+          if (item.goal_id && item.type === 'expense') {
+            await query("UPDATE goals SET current_amount = CASE WHEN current_amount - ? < 0 THEN 0 ELSE current_amount - ? END WHERE id = ? AND user_id = ?", [item.amount, item.amount, item.goal_id, req.user.id]);
+          }
+        }
+
+        // Delete old series
+        await query("DELETE FROM transactions WHERE (id = ? OR installment_ref = ?) AND user_id = ?", [parentId, parentId, req.user.id]);
+
+        // Re-insert as NEW transaction (reusing the POST logic basically)
+        // Note: For simplicity, we just trigger the POST-like logic here
+        const info = await query(
+          "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_num, goal_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [req.user.id, amount, category, description, date, type, totalInstallments, 1, goal_id]
+        );
+        const newParentId = info.lastInsertRowid;
+
+        if (totalInstallments > 1 && newParentId) {
+          const [year, month, day] = date.split('-').map(Number);
+          for (let i = 2; i <= totalInstallments; i++) {
+            let nextYear = year;
+            let nextMonth = month + (i - 1) - 1;
+            nextYear += Math.floor(nextMonth / 12);
+            nextMonth = nextMonth % 12;
+            const nextDateLimit = new Date(nextYear, nextMonth + 1, 0);
+            const targetDay = Math.min(day, nextDateLimit.getDate());
+            const finalDate = new Date(nextYear, nextMonth, targetDay, 12, 0, 0);
+            const nextDateStr = finalDate.toISOString().split('T')[0];
+            const installDesc = `${description} (${i}/${totalInstallments})`;
+            await query(
+              "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_ref, installment_num, goal_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              [req.user.id, amount, category, installDesc, nextDateStr, type, totalInstallments, newParentId, i, goal_id]
+            );
+          }
+          await query("UPDATE transactions SET description = ? WHERE id = ?", [`${description} (1/${totalInstallments})`, newParentId]);
+        }
+
+        if (goal_id && type === 'expense') {
+          const totalToDebit = totalInstallments > 1 ? amount * totalInstallments : amount;
+          await query("UPDATE goals SET current_amount = current_amount + ? WHERE id = ? AND user_id = ?", [totalToDebit, goal_id, req.user.id]);
+        }
+
+        return res.json({ message: "Série atualizada com sucesso", id: newParentId });
+      }
+
+      // --- Normal Edit ---
+      // Revert old goal if changed
+      if (t.goal_id && t.type === 'expense') {
+        await query("UPDATE goals SET current_amount = CASE WHEN current_amount - ? < 0 THEN 0 ELSE current_amount - ? END WHERE id = ? AND user_id = ?", [t.amount, t.amount, t.goal_id, req.user.id]);
+      }
+
       await query(
-        "UPDATE transactions SET amount = ?, category = ?, description = ?, date = ?, type = ? WHERE id = ? AND user_id = ?",
-        [amount, category, description, date, type, req.params.id, req.user.id]
+        "UPDATE transactions SET amount = ?, category = ?, description = ?, date = ?, type = ?, goal_id = ? WHERE id = ? AND user_id = ?",
+        [amount, category, description, date, type, goal_id, req.params.id, req.user.id]
       );
+
+      if (goal_id && type === 'expense') {
+        await query("UPDATE goals SET current_amount = current_amount + ? WHERE id = ? AND user_id = ?", [amount, goal_id, req.user.id]);
+      }
+
       res.json({ success: true });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Update error:", error);
       res.status(500).json({ error: "Erro ao atualizar" });
     }
   });
@@ -370,53 +445,41 @@ async function startServer() {
       const t = rows[0];
       if (!t) return res.status(404).json({ error: "Transação não encontrada" });
 
-      // ── Resolve goal_id if not stored (legacy rows): match by category name ──
-      let effectiveGoalId = t.goal_id || null;
-      if (!effectiveGoalId && t.type === 'expense' && t.category) {
-        const { rows: mg } = await query(
-          "SELECT id FROM goals WHERE user_id = ? AND name = ?",
-          [req.user.id, t.category]
-        );
-        if (mg.length > 0) effectiveGoalId = mg[0].id;
-      }
+      // --- Cascade Delete Logic ---
+      const parentId = t.installment_ref || t.id;
 
-      // ── Reverse goal contribution for this transaction ──
-      if (effectiveGoalId && t.type === 'expense') {
-        await query(
-          "UPDATE goals SET current_amount = CASE WHEN current_amount - ? < 0 THEN 0 ELSE current_amount - ? END WHERE id = ? AND user_id = ?",
-          [t.amount, t.amount, effectiveGoalId, req.user.id]
-        );
-      }
+      // Find all related transactions to revert goals
+      const { rows: series } = await query(
+        "SELECT * FROM transactions WHERE (id = ? OR installment_ref = ?) AND user_id = ?",
+        [parentId, parentId, req.user.id]
+      );
 
-      // Delete this transaction
-      await query("DELETE FROM transactions WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
-
-      // ── If parent with installments, delete all children and reverse their goal debits ──
-      if (!t.installment_ref && t.installments > 1) {
-        const { rows: children } = await query(
-          "SELECT * FROM transactions WHERE installment_ref = ? AND user_id = ?",
-          [req.params.id, req.user.id]
-        );
-
-        if (effectiveGoalId && t.type === 'expense' && children.length > 0) {
-          const totalChildAmount = children.reduce((acc: number, c: any) => acc + c.amount, 0);
-          if (totalChildAmount > 0) {
-            await query(
-              "UPDATE goals SET current_amount = CASE WHEN current_amount - ? < 0 THEN 0 ELSE current_amount - ? END WHERE id = ? AND user_id = ?",
-              [totalChildAmount, totalChildAmount, effectiveGoalId, req.user.id]
-            );
-          }
+      for (const item of series) {
+        // Reverse goal contribution
+        let itemGoalId = item.goal_id || null;
+        if (!itemGoalId && item.type === 'expense' && item.category) {
+          const { rows: mg } = await query("SELECT id FROM goals WHERE user_id = ? AND name = ?", [req.user.id, item.category]);
+          if (mg.length > 0) itemGoalId = mg[0].id;
         }
 
-        await query(
-          "DELETE FROM transactions WHERE installment_ref = ? AND user_id = ?",
-          [req.params.id, req.user.id]
-        );
+        if (itemGoalId && item.type === 'expense') {
+          await query(
+            "UPDATE goals SET current_amount = CASE WHEN current_amount - ? < 0 THEN 0 ELSE current_amount - ? END WHERE id = ? AND user_id = ?",
+            [item.amount, item.amount, itemGoalId, req.user.id]
+          );
+        }
       }
 
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: "Erro ao deletar" });
+      // Delete the entire series
+      await query(
+        "DELETE FROM transactions WHERE (id = ? OR installment_ref = ?) AND user_id = ?",
+        [parentId, parentId, req.user.id]
+      );
+
+      res.json({ message: "Série de parcelas removida com sucesso" });
+    } catch (error: any) {
+      console.error("Delete error:", error);
+      res.status(500).json({ error: "Erro ao remover" });
     }
   });
 
