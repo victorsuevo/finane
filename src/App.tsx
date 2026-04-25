@@ -134,8 +134,8 @@ export default function App() {
     }
   };
 
-  const globalBalance = (summary.totalIncome || 0) - (summary.totalExpense || 0);
-  const monthTransactions = transactions.filter(t => t.date.startsWith(selectedMonth));
+  const globalBalance = ((summary?.totalIncome || 0) - (summary?.totalExpense || 0));
+  const monthTransactions = (transactions || []).filter(t => t?.date?.startsWith(selectedMonth));
   const monthIncome = monthTransactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const monthExpense = monthTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const monthBalance = monthIncome - monthExpense;
