@@ -351,8 +351,8 @@ async function startServer() {
       // ── Reverse goal contribution for this transaction ──
       if (effectiveGoalId && t.type === 'expense') {
         await query(
-          "UPDATE goals SET current_amount = MAX(0, current_amount - ?) WHERE id = ? AND user_id = ?",
-          [t.amount, effectiveGoalId, req.user.id]
+          "UPDATE goals SET current_amount = CASE WHEN current_amount - ? < 0 THEN 0 ELSE current_amount - ? END WHERE id = ? AND user_id = ?",
+          [t.amount, t.amount, effectiveGoalId, req.user.id]
         );
       }
 
@@ -370,8 +370,8 @@ async function startServer() {
           const totalChildAmount = children.reduce((acc: number, c: any) => acc + c.amount, 0);
           if (totalChildAmount > 0) {
             await query(
-              "UPDATE goals SET current_amount = MAX(0, current_amount - ?) WHERE id = ? AND user_id = ?",
-              [totalChildAmount, effectiveGoalId, req.user.id]
+              "UPDATE goals SET current_amount = CASE WHEN current_amount - ? < 0 THEN 0 ELSE current_amount - ? END WHERE id = ? AND user_id = ?",
+              [totalChildAmount, totalChildAmount, effectiveGoalId, req.user.id]
             );
           }
         }
