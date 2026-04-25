@@ -191,7 +191,7 @@ export default function TransactionForm({
               className="flex items-baseline gap-2 cursor-text"
               onClick={() => inputRef.current?.focus()}
             >
-              <span className="text-2xl font-black text-slate-300 dark:text-slate-600 select-none">R$</span>
+              <span className="text-2xl font-black text-slate-400 dark:text-slate-600 select-none">R$</span>
               <input
                 ref={inputRef}
                 required
@@ -203,7 +203,7 @@ export default function TransactionForm({
                 placeholder="0,00"
                 value={amount}
                 onChange={e => setAmount(e.target.value)}
-                className="w-full text-5xl font-black bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-200 dark:placeholder:text-slate-800 tracking-tighter"
+                className="w-full text-5xl font-black bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700 tracking-tighter"
               />
             </div>
           </div>
@@ -233,7 +233,7 @@ export default function TransactionForm({
                 onChange={e => setCategory(e.target.value)}
                 className={cn(
                   'w-full bg-transparent border-none text-sm font-bold focus:ring-0 p-0',
-                  isGoalCategory ? 'text-indigo-800 dark:text-indigo-300' : 'text-slate-900 dark:text-white [&>optgroup]:bg-slate-900 [&>option]:bg-slate-900'
+                  isGoalCategory ? 'text-indigo-800 dark:text-indigo-300' : 'text-slate-900 dark:text-white [&>optgroup]:bg-white dark:[&>optgroup]:bg-slate-900 [&>option]:bg-white dark:[&>option]:bg-slate-900'
                 )}
               >
                 {type === 'income' ? (
