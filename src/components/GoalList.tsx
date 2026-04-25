@@ -4,6 +4,8 @@ import { Target, Calendar, Trash2, PiggyBank } from 'lucide-react';
 import { Goal } from '../types';
 import { formatCurrency } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import ConfirmModal from './ConfirmModal';
+import { useState } from 'react';
 
 interface Props {
   goals: Goal[];
@@ -14,13 +16,15 @@ interface Props {
 
 export default function GoalList({ goals, onAdd, onRefresh, onEdit }: Props) {
   const { token } = useAuth();
+  const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Deletar esta meta?')) return;
-    await fetch(`/api/goals/${id}`, {
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    await fetch(`/api/goals/${deleteId}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });
+    setDeleteId(null);
     onRefresh();
   };
 
@@ -81,7 +85,7 @@ export default function GoalList({ goals, onAdd, onRefresh, onEdit }: Props) {
                       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                     </button>
                     <button
-                      onClick={() => goal.id && handleDelete(goal.id)}
+                      onClick={() => goal.id && setDeleteId(goal.id)}
                       className="p-1.5 text-slate-400 hover:text-rose-400 transition-colors"
                     >
                       <Trash2 size={14} />
@@ -122,6 +126,14 @@ export default function GoalList({ goals, onAdd, onRefresh, onEdit }: Props) {
           );
         })}
       </div>
+
+      <ConfirmModal
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title="Remover Meta?"
+        message="Tem certeza que deseja excluir esta meta? Isso não excluirá as transações que você já realizou para ela."
+      />
     </div>
   );
 }

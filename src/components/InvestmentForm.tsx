@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, TrendingUp, Landmark, Bitcoin, ShieldCheck, Save, Loader2 } from 'lucide-react';
 import { Investment } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { cn } from '../lib/utils';
 
 interface Props {
   onSuccess: () => void;

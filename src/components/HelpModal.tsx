@@ -34,66 +34,43 @@ export default function HelpModal({ isOpen, onClose }: Props) {
             </div>
 
             <div className="flex-1 overflow-y-auto p-8 space-y-8">
-              {/* Seção 1 */}
               <section className="space-y-4">
                 <div className="flex items-center gap-2 text-indigo-600">
-                  <Sparkles size={18} />
-                  <h3 className="font-black text-xs uppercase tracking-widest">Patrimônio Real (Net Worth)</h3>
+                  <BarChart3 size={18} />
+                  <h3 className="font-black text-xs uppercase tracking-widest">Painel Principal</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  O SUEVO agora calcula sua riqueza real. No topo do dashboard, você vê o <strong>Patrimônio Real</strong>, que é a soma do seu saldo em conta mais o valor total acumulado em seus investimentos. 
-                  O gráfico de área "Patrimônio Total" mostra essa evolução ao longo do tempo.
+                  O painel exibe o resumo financeiro do mês selecionado. O <strong>Patrimônio Real</strong> apresenta a soma do saldo em conta corrente com o valor total alocado em investimentos. Os gráficos detalham a distribuição de despesas por categoria e a composição da carteira de ativos.
                 </p>
               </section>
 
-              {/* Seção 2 */}
               <section className="space-y-4">
                 <div className="flex items-center gap-2 text-emerald-600">
-                  <Wallet size={18} />
-                  <h3 className="font-black text-xs uppercase tracking-widest">Gestão de Investimentos</h3>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl">
-                    <p className="text-[10px] font-black text-indigo-600 uppercase mb-2">Edição Direta</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Passe o mouse ou toque em um card de investimento para ver os botões de <strong>Editar</strong> ou <strong>Excluir</strong>.</p>
-                  </div>
-                  <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl">
-                    <p className="text-[10px] font-black text-emerald-600 uppercase mb-2">Carteira de Ativos</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Confira no carrossel de gráficos a distribuição percentual da sua carteira (Cripto, Renda Fixa, etc).</p>
-                  </div>
-                </div>
-              </section>
-
-              {/* Seção 3 */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-2 text-rose-600">
-                  <BarChart3 size={18} />
-                  <h3 className="font-black text-xs uppercase tracking-widest">Gastos Mais Precisos</h3>
+                  <CreditCard size={18} />
+                  <h3 className="font-black text-xs uppercase tracking-widest">Gestão de Transações</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  O gráfico de "Gastos por Categoria" agora ignora automaticamente aportes em investimentos. Assim, você vê apenas o que realmente foi gasto em consumo, moradia, lazer, etc.
+                  Utilize o botão flutuante (+) para registrar novas receitas ou despesas. Transações podem ser categorizadas, parceladas ou vinculadas a metas e investimentos específicos. Para editar ou excluir um registro, utilize as opções disponíveis ao lado de cada transação listada.
                 </p>
               </section>
 
-              {/* Seção 4 */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-rose-600">
+                  <Target size={18} />
+                  <h3 className="font-black text-xs uppercase tracking-widest">Metas e Investimentos</h3>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Crie metas de economia ou adicione ativos à carteira de investimentos. Para modificar os dados de um investimento ou meta existente, clique no ícone de edição associado ao item correspondente.
+                </p>
+              </section>
+
               <section className="space-y-4">
                 <div className="flex items-center gap-2 text-amber-600">
                   <Search size={18} />
-                  <h3 className="font-black text-xs uppercase tracking-widest">Histórico & Busca</h3>
+                  <h3 className="font-black text-xs uppercase tracking-widest">Histórico e Filtros</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Clique no ícone de lupa <Search size={14} className="inline" /> ao lado de "Transações do Mês" para abrir o histórico completo. Lá você pode buscar qualquer transação antiga por nome ou data.
-                </p>
-              </section>
-
-              {/* Seção 5 */}
-              <section className="bg-indigo-50 dark:bg-indigo-950/20 p-6 rounded-[2rem] border border-indigo-100 dark:border-indigo-900/30">
-                <div className="flex items-center gap-2 text-indigo-600 mb-2">
-                  <ShieldCheck size={18} />
-                  <h3 className="font-black text-xs uppercase tracking-widest">Dica de Segurança</h3>
-                </div>
-                <p className="text-xs text-indigo-700 dark:text-indigo-300 leading-relaxed">
-                  Seus dados são salvos automaticamente. Use o botão <strong>Salvar</strong> no topo para garantir o backup manual ou atualizar o saldo após grandes mudanças.
+                  Acesse o histórico completo clicando no ícone de busca. A ferramenta permite filtrar transações anteriores por descrição, categoria ou período específico, facilitando a auditoria dos lançamentos.
                 </p>
               </section>
             </div>
