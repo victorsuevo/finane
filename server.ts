@@ -294,9 +294,10 @@ async function startServer() {
         [req.user.id, amount, category, description, date, type, totalInstallments, 1, resolvedGoalId]
       );
       const parentId = info.lastInsertRowid;
+      console.log(`[INSTALLMENTS] Transação principal criada. ID: ${parentId}, Parcelas: ${totalInstallments}`);
 
       // If parceled, insert remaining installments
-      if (totalInstallments > 1) {
+      if (totalInstallments > 1 && parentId) {
         const baseDate = new Date(date + 'T12:00:00');
         for (let i = 2; i <= totalInstallments; i++) {
           const nextDate = new Date(baseDate);
@@ -314,6 +315,7 @@ async function startServer() {
           "UPDATE transactions SET description = ? WHERE id = ?",
           [firstDesc, parentId]
         );
+        console.log(`[INSTALLMENTS] Sucesso ao gerar parcelas filhas para o pai ${parentId}`);
       }
 
       // ── Debit goal current_amount (only for the 1st installment; each child counts on its own month) ──
