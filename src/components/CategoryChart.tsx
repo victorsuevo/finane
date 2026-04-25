@@ -1,26 +1,26 @@
 import { useState, useMemo } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-  LineChart, Line, PieChart, Pie,
+  LineChart, Line, PieChart, Pie, AreaChart, Area,
   CartesianGrid, Legend
 } from 'recharts';
-import { Transaction } from '../types';
+import { Transaction, Investment } from '../types';
 import { format, subMonths, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, BarChart3, LineChart as LineIcon, PieChart as PieIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, BarChart3, LineChart as LineIcon, PieChart as PieIcon, AreaChart as AreaIcon, Wallet } from 'lucide-react';
 
 interface Props {
   transactions: Transaction[];
   currentMonth: string;
+  investments: Investment[];
 }
 
 const COLORS = ['#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#ef4444', '#f97316', '#f59e0b', '#eab308'];
 
-export default function CategoryChart({ transactions = [], currentMonth }: Props) {
+export default function CategoryChart({ transactions = [], currentMonth, investments = [] }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
 
-  // Safety check for date
   const currentMonthDate = useMemo(() => {
     try {
       const d = parseISO(`${currentMonth}-01`);
@@ -31,45 +31,80 @@ export default function CategoryChart({ transactions = [], currentMonth }: Props
   }, [currentMonth]);
 
   const monthExpenseData = useMemo(() => {
-    try {
-      const expenses = (transactions || [])
-        .filter(t => t?.type === 'expense' && t?.date?.startsWith(currentMonth))
-        .reduce((acc, t) => {
-          acc[t.category] = (acc[t.category] || 0) + t.amount;
-          return acc;
-        }, {} as Record<string, number>);
+    const expenses = (transactions || [])
+      .filter(t => t?.type === 'expense' && t?.date?.startsWith(currentMonth) && !t.investment_id)
+      .reduce((acc, t) => {
+        acc[t.category] = (acc[t.category] || 0) + t.amount;
+        return acc;
+      }, {} as Record<string, number>);
 
-      return Object.entries(expenses)
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value);
-    } catch {
-      return [];
-    }
+    return Object.entries(expenses)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
   }, [transactions, currentMonth]);
 
-  const evolutionData = useMemo(() => {
-    try {
-      const months = Array.from({ length: 6 }).map((_, i) => {
-        const d = subMonths(currentMonthDate, 5 - i);
-        return format(d, 'yyyy-MM');
-      });
+  const investmentDistribution = useMemo(() => {
+    const dist = (investments || []).reduce((acc, inv) => {
+      const typeLabel = {
+        'renda_fixa': 'Renda Fixa',
+        'renda_variavel': 'Variável',
+        'cripto': 'Cripto',
+        'reserva': 'Reserva'
+      }[inv.type] || inv.type;
+      
+      acc[typeLabel] = (acc[typeLabel] || 0) + inv.current_amount;
+      return acc;
+    }, {} as Record<string, number>);
 
-      return months.map(m => {
-        const monthTxs = (transactions || []).filter(t => t?.date?.startsWith(m));
-        const income = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-        const expense = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-        
-        let label = '...';
-        try {
-          label = format(parseISO(`${m}-01`), 'MMM', { locale: ptBR });
-        } catch {}
-        
-        return { month: m, label, income, expense, balance: income - expense };
-      });
-    } catch {
-      return [];
-    }
+    return Object.entries(dist).map(([name, value]) => ({ name, value }));
+  }, [investments]);
+
+  const evolutionData = useMemo(() => {
+    const months = Array.from({ length: 6 }).map((_, i) => {
+      const d = subMonths(currentMonthDate, 5 - i);
+      return format(d, 'yyyy-MM');
+    });
+
+    return months.map(m => {
+      const monthTxs = (transactions || []).filter(t => t?.date?.startsWith(m));
+      const income = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+      const expense = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+      
+      let label = m;
+      try {
+        label = format(parseISO(`${m}-01`), 'MMM', { locale: ptBR });
+      } catch {}
+
+      return { month: m, label, income, expense, balance: income - expense };
+    });
   }, [transactions, currentMonthDate]);
+
+  const areaData = useMemo(() => {
+    let cumulative = 0;
+    const sortedTxs = [...(transactions || [])].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    
+    const monthMap = {} as Record<string, number>;
+    sortedTxs.forEach(t => {
+      if (!t?.date || t.date.length < 7) return;
+      const m = t.date.substring(0, 7);
+      const val = t.type === 'income' ? t.amount : -t.amount;
+      monthMap[m] = (monthMap[m] || 0) + val;
+    });
+
+    const months = Object.keys(monthMap).sort();
+    const recentMonths = months.slice(-8);
+    const currentInvestTotal = (investments || []).reduce((acc, inv) => acc + (inv.current_amount || 0), 0);
+
+    return recentMonths.map(m => {
+      cumulative += monthMap[m];
+      let name = m;
+      try {
+        name = format(parseISO(`${m}-01`), 'MMM', { locale: ptBR });
+      } catch {}
+
+      return { name, saldo: cumulative + currentInvestTotal };
+    });
+  }, [transactions, investments]);
 
   const charts = [
     {
@@ -102,6 +137,34 @@ export default function CategoryChart({ transactions = [], currentMonth }: Props
       )
     },
     {
+      id: 'invest_pie',
+      title: 'Carteira de Ativos',
+      subtitle: 'Composição dos investimentos',
+      icon: <Wallet size={16} />,
+      render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={investmentDistribution}
+              cx="50%"
+              cy="50%"
+              innerRadius={50}
+              outerRadius={70}
+              paddingAngle={5}
+              dataKey="value"
+            >
+              {investmentDistribution.map((_, i) => <Cell key={i} fill={COLORS[(i + 2) % COLORS.length]} />)}
+            </Pie>
+            <Tooltip 
+              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
+              formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            />
+            <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: '9px', fontWeight: 600 }} />
+          </PieChart>
+        </ResponsiveContainer>
+      )
+    },
+    {
       id: 'line',
       title: 'Evolução Mensal',
       subtitle: 'Entradas vs Saídas (6 meses)',
@@ -123,30 +186,26 @@ export default function CategoryChart({ transactions = [], currentMonth }: Props
       )
     },
     {
-      id: 'pie',
-      title: 'Distribuição',
-      subtitle: 'Proporção das despesas',
-      icon: <PieIcon size={16} />,
+      id: 'area',
+      title: 'Patrimônio Total',
+      subtitle: 'Saldo + Investimentos',
+      icon: <AreaIcon size={16} />,
       render: () => (
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={monthExpenseData}
-              cx="50%"
-              cy="50%"
-              innerRadius={50}
-              outerRadius={70}
-              paddingAngle={5}
-              dataKey="value"
-            >
-              {monthExpenseData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-            </Pie>
+          <AreaChart data={areaData}>
+            <defs>
+              <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} />
             <Tooltip 
               contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
               formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             />
-            <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: '9px', fontWeight: 600 }} />
-          </PieChart>
+            <Area type="monotone" dataKey="saldo" name="Patrimônio" stroke="#6366f1" fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={3} />
+          </AreaChart>
         </ResponsiveContainer>
       )
     }
@@ -155,11 +214,8 @@ export default function CategoryChart({ transactions = [], currentMonth }: Props
   const nextChart = () => setActiveIndex((prev) => (prev + 1) % charts.length);
   const prevChart = () => setActiveIndex((prev) => (prev - 1 + charts.length) % charts.length);
 
-  // If no data, still render the container to avoid white screen
-  if (!charts[activeIndex]) return null;
-
   return (
-    <div className="mx-5 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden relative group min-h-[300px]">
+    <div className="mx-5 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden relative group">
       <div className="p-6 pb-2 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
