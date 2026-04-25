@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Wallet, TrendingUp, TrendingDown, Crown, Save, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Wallet, TrendingUp, TrendingDown, Crown, Save, Check, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { Transaction, Summary, Goal } from './types';
 import { formatCurrency } from './lib/utils';
 import { format, subMonths, addMonths, parseISO } from 'date-fns';
@@ -18,6 +18,7 @@ import ManagerPanel from './components/ManagerPanel';
 import SettingsPanel from './components/SettingsPanel';
 import ConfirmModal from './components/ConfirmModal';
 import HelpModal from './components/HelpModal';
+import HistoryModal from './components/HistoryModal';
 import { useAuth } from './contexts/AuthContext';
 import { LogOut } from 'lucide-react';
 
@@ -32,6 +33,7 @@ export default function App() {
   const [showManager, setShowManager] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -47,6 +49,12 @@ export default function App() {
   };
 
   const monthLabel = format(parseISO(`${selectedMonth}-01`), "MMMM 'de' yyyy", { locale: ptBR });
+  
+  const jumpToMonth = (dateStr: string) => {
+    const month = dateStr.substring(0, 7); // yyyy-MM
+    setSelectedMonth(month);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const fetchData = useCallback(async () => {
     if (!token) return;
@@ -264,9 +272,18 @@ export default function App() {
         {/* Transactions List */}
         <div className="space-y-4 pb-24">
           <div className="px-5 flex justify-between items-end">
-            <h3 className="font-bold text-sm text-slate-900 tracking-tight">Transações do Mês</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-sm text-slate-900 tracking-tight">Transações do Mês</h3>
+              <button 
+                onClick={() => setShowHistory(true)}
+                className="p-1 text-slate-300 hover:text-indigo-600 transition-colors"
+                title="Buscar no histórico"
+              >
+                <Search size={14} />
+              </button>
+            </div>
             <span className="text-[10px] text-slate-400 font-bold">
-              {monthTransactions.length} registros
+              {monthTransactions.length} {monthTransactions.length === 1 ? 'registro' : 'registros'}
             </span>
           </div>
           <TransactionList
@@ -333,6 +350,13 @@ export default function App() {
       <HelpModal 
         isOpen={showHelp}
         onClose={() => setShowHelp(false)}
+      />
+
+      <HistoryModal
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        transactions={transactions}
+        onSelectTransaction={jumpToMonth}
       />
     </div>
   );
