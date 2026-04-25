@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { Transaction, Goal } from '../types';
 import { getFinancialInsights } from '../services/geminiService';
@@ -58,7 +59,11 @@ export default function AIInsights({ transactions, goals = [] }: Props) {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  {insight || 'Adicione transações para ver seus insights personalizados.'}
+                  <div className="prose prose-invert prose-sm max-w-none prose-p:my-0 prose-strong:font-bold text-inherit">
+                    <ReactMarkdown>
+                      {insight || 'Adicione transações para ver seus insights personalizados.'}
+                    </ReactMarkdown>
+                  </div>
                 </motion.div>
               </AnimatePresence>
             )}

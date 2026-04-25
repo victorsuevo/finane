@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageCircle, X, Send, Bot, User, Loader2 } from 'lucide-react';
 import { Transaction, Goal } from '../types';
@@ -102,10 +103,10 @@ export default function ChatAssistant({ transactions, goals = [] }: Props) {
                     {msg.role === 'assistant' ? <Bot size={14} /> : <User size={14} />}
                   </div>
                   <div className={cn(
-                    "p-3 rounded-2xl text-[11px] leading-relaxed shadow-sm",
-                    msg.role === 'assistant' ? "bg-white text-slate-800" : "bg-indigo-600 text-white"
+                    "p-3 rounded-2xl text-[11px] leading-relaxed shadow-sm prose prose-sm max-w-none prose-p:my-0 prose-strong:font-bold prose-headings:text-sm prose-headings:my-1",
+                    msg.role === 'assistant' ? "bg-white text-slate-800 prose-slate" : "bg-indigo-600 text-white prose-invert"
                   )}>
-                    {msg.text}
+                    <ReactMarkdown>{msg.text}</ReactMarkdown>
                   </div>
                 </div>
               ))}
