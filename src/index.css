@@ -62,7 +62,6 @@
 
 .dark input, .dark select, .dark textarea {
   color: #f8fafc !important;
-  background-color: #000000 !important;
 }
 
 /* Exception for items that must remain white */
