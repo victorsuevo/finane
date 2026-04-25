@@ -33,60 +33,88 @@ export default function HelpModal({ isOpen, onClose }: Props) {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8 space-y-8">
-              <section className="space-y-4">
+            <div className="flex-1 overflow-y-auto p-8 space-y-8">              <section className="space-y-4">
                 <div className="flex items-center gap-2 text-indigo-600">
                   <BarChart3 size={18} />
-                  <h3 className="font-black text-xs uppercase tracking-widest">Painel Principal</h3>
+                  <h3 className="font-black text-xs uppercase tracking-widest">Painel Principal e Dashboards</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  O painel exibe o resumo financeiro do mês selecionado. O <strong>Patrimônio Real</strong> apresenta a soma do saldo em conta corrente com o valor total alocado em investimentos. Os gráficos detalham a distribuição de despesas por categoria e a evolução da sua carteira. Navegue pelos meses utilizando as setas direcionais no topo da tela.
+                  O painel é sua central de comando. O <strong>Resultado do Mês</strong> mostra quanto sobrou (ou faltou) após todas as movimentações. O <strong>Patrimônio Real</strong> é a métrica mais importante: ele soma o dinheiro que você tem hoje com tudo o que você já investiu em ativos.
                 </p>
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Como usar os gráficos:</p>
+                  <ul className="text-[11px] text-slate-500 dark:text-slate-400 space-y-2 list-disc pl-4">
+                    <li>Deslize para os lados (ou use as setas) no carrossel para ver diferentes visualizações: Gastos por Categoria, Composição Mensal, Evolução de 6 meses e Crescimento do Patrimônio.</li>
+                    <li>O gráfico de <strong>Composição Mensal</strong> empilha suas entradas e saídas para que você veja visualmente se está vivendo abaixo do que ganha.</li>
+                  </ul>
+                </div>
               </section>
 
               <section className="space-y-4">
                 <div className="flex items-center gap-2 text-emerald-600">
                   <CreditCard size={18} />
-                  <h3 className="font-black text-xs uppercase tracking-widest">Gestão de Transações</h3>
+                  <h3 className="font-black text-xs uppercase tracking-widest">Lançamentos e Parcelamento</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Utilize o botão flutuante (+) para registrar novas receitas ou despesas. Transações podem ser categorizadas, parceladas ou vinculadas a metas e investimentos específicos. Ao lançar uma despesa e classificá-la como "Investimento", o sistema automaticamente deduzirá o valor da sua conta principal e o adicionará à carteira selecionada.
+                  Tudo começa no botão (+). Ao lançar uma despesa, você pode definir se ela foi à vista ou <strong>parcelada</strong>.
                 </p>
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Recursos Avançados:</p>
+                  <ul className="text-[11px] text-slate-500 dark:text-slate-400 space-y-2 list-disc pl-4">
+                    <li><strong>Investimento como Gasto:</strong> Ao comprar um ativo (ex: Tesouro Direto), lance como uma Saída na categoria correspondente. O SUEVO entenderá que esse dinheiro saiu do seu saldo, mas aumentou seu patrimônio real.</li>
+                    <li><strong>Parcelas:</strong> Ao definir 12 parcelas, o sistema criará automaticamente o lançamento para os próximos 12 meses. Se você editar ou excluir uma parcela, o sistema perguntará se deseja aplicar a mudança em toda a série.</li>
+                  </ul>
+                </div>
               </section>
 
               <section className="space-y-4">
                 <div className="flex items-center gap-2 text-rose-600">
                   <Target size={18} />
-                  <h3 className="font-black text-xs uppercase tracking-widest">Carteira de Ativos e Metas</h3>
+                  <h3 className="font-black text-xs uppercase tracking-widest">Metas e Ativos</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Gerencie sua carteira adicionando ativos (Renda Fixa, Variável, Criptomoedas, etc.) através do painel de investimentos. Para modificar os dados de um investimento ou meta já lançada, clique no ícone de lápis (editar) associado ao item correspondente na tela principal.
+                  As <strong>Metas</strong> são seus objetivos (ex: Viagem, Carro Novo). Os <strong>Ativos</strong> são onde seu dinheiro está rendendo (ex: Renda Fixa, Cripto).
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Para atualizar o valor de um ativo (valorização/desvalorização), utilize o ícone de lápis ao lado dele. Isso ajustará seu patrimônio sem necessariamente criar uma transação de entrada.
                 </p>
               </section>
 
               <section className="space-y-4">
                 <div className="flex items-center gap-2 text-amber-600">
                   <Search size={18} />
-                  <h3 className="font-black text-xs uppercase tracking-widest">Histórico e Filtros</h3>
+                  <h3 className="font-black text-xs uppercase tracking-widest">Busca e Histórico Inteligente</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Acesse o histórico completo clicando no ícone de busca (lupa) na seção de transações do mês. A ferramenta permite filtrar transações anteriores por descrição, categoria ou período. Ao clicar sobre uma transação no histórico, o sistema navegará automaticamente para o mês correspondente.
+                  A lupa na lista de transações abre o <strong>Histórico de Lançamentos</strong>. Você pode buscar qualquer coisa por nome ou data.
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-bold italic">
+                  Dica: No histórico, clique em qualquer transação para ser levado instantaneamente ao mês em que ela ocorreu no painel principal.
                 </p>
               </section>
               
               <section className="space-y-4">
                 <div className="flex items-center gap-2 text-purple-600">
                   <Sparkles size={18} />
-                  <h3 className="font-black text-xs uppercase tracking-widest">Inteligência Artificial</h3>
+                  <h3 className="font-black text-xs uppercase tracking-widest">Inteligência Artificial (Chat)</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  O assistente integrado analisa seus hábitos de consumo e fornece dicas personalizadas com base no seu histórico recente. Você pode interagir com o chat no canto inferior esquerdo para fazer perguntas específicas sobre suas finanças ou solicitar resumos de gastos.
+                  No canto inferior esquerdo, você tem o Assistente SUEVO. Ele conhece todos os seus dados.
                 </p>
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Exemplos do que perguntar:</p>
+                  <ul className="text-[11px] text-slate-500 dark:text-slate-400 space-y-1 italic pl-4">
+                    <li>"Quanto eu gastei com mercado nos últimos 3 meses?"</li>
+                    <li>"Me dê 3 dicas para sobrar mais dinheiro este mês."</li>
+                    <li>"Qual a minha meta que está mais próxima de ser atingida?"</li>
+                  </ul>
+                </div>
               </section>
             </div>
 
-            <div className="p-8 bg-slate-50 dark:bg-slate-800/50 text-center">
+            <div className="p-8 bg-slate-50 dark:bg-slate-800/50 text-center border-t border-slate-100 dark:border-slate-700">
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">SUEVO Financial Ecosystem &copy; 2026</p>
+            </div>ncial Ecosystem &copy; 2026</p>
             </div>
           </motion.div>
         </div>

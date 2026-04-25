@@ -208,6 +208,28 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
           </AreaChart>
         </ResponsiveContainer>
       )
+    },
+    {
+      id: 'composition',
+      title: 'Composição Mensal',
+      subtitle: 'Entradas e Saídas empilhadas',
+      icon: <BarChart3 size={16} />,
+      render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={evolutionData}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+            <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} />
+            <YAxis hide />
+            <Tooltip 
+              cursor={{ fill: 'rgba(148, 163, 184, 0.1)' }}
+              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', backgroundColor: 'rgba(15, 23, 42, 0.9)', color: '#fff' }}
+            />
+            <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 700, paddingTop: '10px' }} />
+            <Bar dataKey="income" name="Entradas" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
+            <Bar dataKey="expense" name="Saídas" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      )
     }
   ];
 
