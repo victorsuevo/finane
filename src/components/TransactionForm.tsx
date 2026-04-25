@@ -11,6 +11,7 @@ interface Props {
   initialType?: 'income' | 'expense';
   goals?: Goal[];
   editTransaction?: any;
+  defaultDate?: string; // format: "yyyy-MM"
 }
 
 const INCOME_CATEGORIES = [
@@ -31,6 +32,7 @@ export default function TransactionForm({
   initialType = 'expense',
   goals = [],
   editTransaction,
+  defaultDate,
 }: Props) {
   const [amount, setAmount] = useState(editTransaction ? editTransaction.amount.toString() : '');
   const [type, setType] = useState<'income' | 'expense'>(editTransaction ? editTransaction.type : initialType);
@@ -38,7 +40,16 @@ export default function TransactionForm({
     editTransaction ? editTransaction.category : (initialType === 'income' ? 'Salário' : 'Outros')
   );
   const [description, setDescription] = useState(editTransaction ? (editTransaction.description || '') : '');
-  const [date, setDate] = useState(editTransaction ? editTransaction.date : new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(() => {
+    if (editTransaction) return editTransaction.date;
+    const today = new Date().toISOString().split('T')[0];
+    if (!defaultDate) return today;
+    
+    // If defaultDate (yyyy-MM) matches current month, use today.
+    // Otherwise use the 1st of that month.
+    if (today.startsWith(defaultDate)) return today;
+    return `${defaultDate}-01`;
+  });
   const [installments, setInstallments] = useState(1);
   const [loading, setLoading] = useState(false);
   const { token } = useAuth();

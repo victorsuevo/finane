@@ -277,6 +277,7 @@ export default function App() {
         <TransactionForm
           initialType={formType}
           editTransaction={editTx}
+          defaultDate={selectedMonth}
           goals={goals}
           onSuccess={() => {
             handleAfterAdd();
