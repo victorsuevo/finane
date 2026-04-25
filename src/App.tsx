@@ -73,6 +73,15 @@ export default function App() {
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    const theme = localStorage.getItem('app_theme');
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
+
   const handleSave = async () => {
     setSaveStatus('saving');
     await fetchData();
