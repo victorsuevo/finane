@@ -361,6 +361,15 @@ async function startServer() {
       const willBeSeries = totalInstallments > 1;
       const parentId = t.installment_ref || t.id;
 
+      // 2. Encontrar a transação pai para preservar a data original do lançamento
+      const { rows: parentRows } = await query("SELECT * FROM transactions WHERE id = ? AND user_id = ?", [parentId, req.user.id]);
+      const tParent = parentRows[0] || t;
+      
+      // Se a data enviada for igual à data da parcela que está sendo editada, 
+      // significa que o usuário NÃO alterou a data manualmente. 
+      // Nesse caso, usamos a data do pai para manter o início da série original.
+      const finalBaseDate = (date === t.date) ? tParent.date : date;
+
       if (isSeries || willBeSeries) {
         // --- Cascade Edit: Delete old (single or series) and recreate ---
         
@@ -379,16 +388,15 @@ async function startServer() {
         // Delete old series
         await query("DELETE FROM transactions WHERE (id = ? OR installment_ref = ?) AND user_id = ?", [parentId, parentId, req.user.id]);
 
-        // Re-insert as NEW transaction (reusing the POST logic basically)
-        // Note: For simplicity, we just trigger the POST-like logic here
+        // Re-insert as NEW transaction using finalBaseDate
         const info = await query(
           "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_num, goal_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [req.user.id, amount, category, description, date, type, totalInstallments, 1, goal_id]
+          [req.user.id, amount, category, description, finalBaseDate, type, totalInstallments, 1, goal_id]
         );
         const newParentId = info.lastInsertRowid;
 
         if (totalInstallments > 1 && newParentId) {
-          const [year, month, day] = date.split('-').map(Number);
+          const [year, month, day] = finalBaseDate.split('-').map(Number);
           for (let i = 2; i <= totalInstallments; i++) {
             let nextYear = year;
             let nextMonth = month + (i - 1) - 1;
