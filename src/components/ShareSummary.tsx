@@ -66,6 +66,20 @@ export default function ShareSummary({ summary, transactions, goals = [], userNa
     report += `📉 Saídas:   ${formatCurrency(monthExpense)}\n`;
     report += `${monthBalance >= 0 ? '🟢' : '🔴'} Balanço: ${formatCurrency(monthBalance)}\n\n`;
 
+    // Month transactions details
+    if (monthTx.length > 0) {
+      report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+      report += `📜 *TRANSAÇÕES DO MÊS*\n`;
+      report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+      monthTx.forEach(t => {
+        const dateLabel = format(parseISO(t.date), 'dd/MM', { locale: ptBR });
+        const icon = t.type === 'income' ? '🟩' : '🟥';
+        const desc = t.description || t.category;
+        report += `${icon} ${dateLabel} · ${desc}: ${formatCurrency(t.amount)}\n`;
+      });
+      report += `\n`;
+    }
+
     // Income breakdown
     if (Object.keys(incomeByCategory).length > 0) {
       report += `💚 *Entradas por categoria:*\n`;

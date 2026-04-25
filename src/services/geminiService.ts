@@ -36,7 +36,7 @@ export async function chatWithAssistant(message: string, transactions: Transacti
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ message, transactions })
+      body: JSON.stringify({ message, transactions: transactions.slice(0, 30) })
     });
     const data = await res.json();
     if (!res.ok) return data;

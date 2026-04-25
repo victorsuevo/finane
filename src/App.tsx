@@ -15,6 +15,7 @@ import GoalList from './components/GoalList';
 import GoalForm from './components/GoalForm';
 import ShareSummary from './components/ShareSummary';
 import ManagerPanel from './components/ManagerPanel';
+import SettingsPanel from './components/SettingsPanel';
 import { useAuth } from './contexts/AuthContext';
 import { LogOut } from 'lucide-react';
 
@@ -27,6 +28,8 @@ export default function App() {
   const [formType, setFormType] = useState<'income' | 'expense'>('expense');
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [showManager, setShowManager] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
@@ -110,9 +113,9 @@ export default function App() {
       {/* Header */}
       <header className="fixed top-0 inset-x-0 h-16 bg-white/80 backdrop-blur-md z-40 px-6 flex items-center justify-between border-b border-slate-100">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20">
+          <button onClick={() => setShowSettings(true)} className="w-8 h-8 bg-purple-600 hover:bg-purple-700 transition-colors rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20 cursor-pointer">
             <Wallet className="text-white" size={18} />
-          </div>
+          </button>
           <h1 className="font-black text-lg tracking-tight uppercase">SUEVO</h1>
         </div>
         <div className="flex items-center gap-3">
@@ -233,7 +236,7 @@ export default function App() {
         <AIInsights transactions={monthTransactions} />
 
         {/* Transactions List */}
-        <div className="space-y-4">
+        <div className="space-y-4 pb-24">
           <div className="px-5 flex justify-between items-end">
             <h3 className="font-bold text-sm text-slate-900 tracking-tight">Transações do Mês</h3>
             <span className="text-[10px] text-slate-400 font-bold">
@@ -243,6 +246,7 @@ export default function App() {
           <TransactionList
             transactions={monthTransactions}
             onDelete={handleDelete}
+            onEdit={(t) => { setEditTx(t); setFormType(t.type); setShowForm(true); }}
           />
         </div>
       </main>
@@ -263,12 +267,13 @@ export default function App() {
       {showForm && (
         <TransactionForm
           initialType={formType}
+          editTransaction={editTx}
           goals={goals}
           onSuccess={() => {
             handleAfterAdd();
             setShowForm(false);
           }}
-          onClose={() => setShowForm(false)}
+          onClose={() => { setShowForm(false); setEditTx(null); }}
         />
       )}
 
@@ -284,6 +289,9 @@ export default function App() {
 
       {showManager && (
         <ManagerPanel onClose={() => setShowManager(false)} />
+      )}
+      {showSettings && (
+        <SettingsPanel onClose={() => setShowSettings(false)} />
       )}
     </div>
   );

@@ -140,7 +140,7 @@ async function startServer() {
   const app = express();
   const PORT = parseInt(process.env.PORT || "3000");
 
-  app.use(express.json());
+  app.use(express.json({ limit: '10mb' }));
 
   // Auth Middleware
   const authenticateToken = (req: any, res: any, next: any) => {
@@ -329,6 +329,20 @@ async function startServer() {
     }
   });
 
+  app.put("/api/transactions/:id", authenticateToken, async (req: any, res) => {
+    const { amount, category, description, date, type } = req.body;
+    try {
+      // Simplification: Not recalculating goals/installments logic for edits yet
+      await query(
+        "UPDATE transactions SET amount = ?, category = ?, description = ?, date = ?, type = ? WHERE id = ? AND user_id = ?",
+        [amount, category, description, date, type, req.params.id, req.user.id]
+      );
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao atualizar" });
+    }
+  });
+
   app.delete("/api/transactions/:id", authenticateToken, async (req: any, res) => {
     try {
       const { rows } = await query(
@@ -417,6 +431,16 @@ async function startServer() {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Erro ao deletar meta" });
+    }
+  });
+
+  app.put("/api/users/profile", authenticateToken, async (req: any, res) => {
+    const { name } = req.body;
+    try {
+      await query("UPDATE users SET name = ? WHERE id = ?", [name, req.user.id]);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao atualizar perfil" });
     }
   });
 
@@ -516,32 +540,77 @@ async function startServer() {
 
   // --- AI Routes ---
   const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || "").trim();
+  const GROQ_API_KEY = (process.env.GROQ_API_KEY || "").trim();
+
+  async function callAI(prompt: string): Promise<string> {
+    let geminiError = null;
+
+    // 1. Try Gemini first
+    if (GEMINI_API_KEY) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        const data = await response.json();
+        if (response.ok) {
+          return data.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não entendi.";
+        }
+        if (response.status === 429 || (data.error && data.error.message.includes('Quota exceeded'))) {
+          geminiError = "Quota exceeded";
+        } else {
+          geminiError = data.error?.message || "Erro na API do Google";
+        }
+      } catch (err: any) {
+        geminiError = err.message;
+      }
+    } else {
+      geminiError = "GEMINI_API_KEY não configurada";
+    }
+
+    // 2. Fallback to Groq
+    if (GROQ_API_KEY) {
+      try {
+        console.log(`[AI] Gemini falhou (${geminiError}). Tentando Groq Fallback...`);
+        const url = "https://api.groq.com/openai/v1/chat/completions";
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${GROQ_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: "llama3-8b-8192", // Fast and reliable model
+            messages: [{ role: "user", content: prompt }]
+          })
+        });
+        const data = await response.json();
+        if (response.ok) {
+          return data.choices?.[0]?.message?.content || "Desculpe, não entendi.";
+        }
+        throw new Error(data.error?.message || "Erro na API do Groq");
+      } catch (err: any) {
+        throw new Error(`Gemini e Groq falharam. Erro Groq: ${err.message}`);
+      }
+    }
+
+    if (geminiError === "Quota exceeded") {
+      throw new Error("Limite de consultas à IA excedido (Gemini). Nenhuma chave Groq configurada para fallback.");
+    }
+    throw new Error(geminiError || "Erro desconhecido ao chamar IA");
+  }
 
   app.post("/api/ai/chat", authenticateToken, async (req: any, res) => {
     const { message, transactions } = req.body;
-    if (!GEMINI_API_KEY) {
-      return res.status(500).json({ error: "Configuração ausente: GEMINI_API_KEY não encontrada no servidor." });
-    }
     try {
       const prompt = `
         Você é o "SUEVO", um assistente financeiro pessoal inteligente em português.
         Contexto do Usuário (últimas transações): ${JSON.stringify(transactions.slice(0, 30))}
         Pergunta do usuário: ${message}
       `;
-      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        if (response.status === 429 || (data.error && data.error.message.includes('Quota exceeded'))) {
-          throw new Error("Limite de consultas gratuitas à IA excedido. Por favor, aguarde cerca de um minuto e tente novamente.");
-        }
-        throw new Error(data.error?.message || "Erro na API do Google");
-      }
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui processar isso.";
+      const text = await callAI(prompt);
       res.json({ text });
     } catch (error: any) {
       res.status(500).json({ error: "Erro na IA", details: error.message });
@@ -555,22 +624,13 @@ async function startServer() {
         Aja como um consultor financeiro pessoal em português. Analise estas transações e dê 3 dicas curtas e práticas:
         ${JSON.stringify(transactions.slice(0, 50))}
       `;
-      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        if (response.status === 429 || (data.error && data.error.message.includes('Quota exceeded'))) {
-           return res.json({ text: "Muitas requisições simultâneas. Aguarde um minutinho para ver novos insights financeiros." });
-        }
-        throw new Error(data.error?.message || "Erro na API");
+      const text = await callAI(prompt);
+      res.json({ text });
+    } catch (error: any) {
+      if (error.message.includes("Limite") || error.message.includes("Quota")) {
+        return res.json({ text: "Muitas requisições simultâneas. Configure uma GROQ_API_KEY no arquivo .env.local para não ficar sem insights!" });
       }
-      res.json({ text: data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem insights no momento." });
-    } catch (error) {
-      res.status(500).json({ error: "Erro nos insights" });
+      res.status(500).json({ error: "Erro nos insights", details: error.message });
     }
   });
 

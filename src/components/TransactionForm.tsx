@@ -10,6 +10,7 @@ interface Props {
   onClose: () => void;
   initialType?: 'income' | 'expense';
   goals?: Goal[];
+  editTransaction?: any;
 }
 
 const INCOME_CATEGORIES = [
@@ -29,14 +30,15 @@ export default function TransactionForm({
   onClose,
   initialType = 'expense',
   goals = [],
+  editTransaction,
 }: Props) {
-  const [amount, setAmount] = useState('');
-  const [type, setType] = useState<'income' | 'expense'>(initialType);
+  const [amount, setAmount] = useState(editTransaction ? editTransaction.amount.toString() : '');
+  const [type, setType] = useState<'income' | 'expense'>(editTransaction ? editTransaction.type : initialType);
   const [category, setCategory] = useState(
-    initialType === 'income' ? 'Salário' : 'Outros'
+    editTransaction ? editTransaction.category : (initialType === 'income' ? 'Salário' : 'Outros')
   );
-  const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [description, setDescription] = useState(editTransaction ? (editTransaction.description || '') : '');
+  const [date, setDate] = useState(editTransaction ? editTransaction.date : new Date().toISOString().split('T')[0]);
   const [installments, setInstallments] = useState(1);
   const [loading, setLoading] = useState(false);
   const { token } = useAuth();
@@ -80,8 +82,8 @@ export default function TransactionForm({
         goal_id,
       };
 
-      const res = await fetch('/api/transactions', {
-        method: 'POST',
+      const res = await fetch(editTransaction ? `/api/transactions/${editTransaction.id}` : '/api/transactions', {
+        method: editTransaction ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -264,7 +266,7 @@ export default function TransactionForm({
           )}
 
           {/* ── Installments (expense only, not goal) ── */}
-          {type === 'expense' && !isGoalCategory && (
+          {!editTransaction && type === 'expense' && !isGoalCategory && (
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-3">
                 <CreditCard size={11} /> Parcelas
