@@ -79,7 +79,8 @@ async function setupTables() {
       installments INTEGER DEFAULT 1,
       installment_ref INTEGER DEFAULT NULL,
       installment_num INTEGER DEFAULT 1,
-      goal_id INTEGER DEFAULT NULL
+      goal_id INTEGER DEFAULT NULL,
+      investment_id INTEGER DEFAULT NULL
     );
     CREATE TABLE IF NOT EXISTS goals (
       id SERIAL PRIMARY KEY,
@@ -88,6 +89,13 @@ async function setupTables() {
       target_amount REAL NOT NULL,
       current_amount REAL DEFAULT 0,
       deadline TEXT
+    );
+    CREATE TABLE IF NOT EXISTS investments (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      current_amount REAL DEFAULT 0
     );
   `;
   try {
@@ -223,6 +231,38 @@ async function startServer() {
     res.json(status);
   });
 
+  // --- Investments Routes ---
+  app.get("/api/investments", authenticateToken, async (req: any, res) => {
+    try {
+      const { rows } = await query("SELECT * FROM investments WHERE user_id = ?", [req.user.id]);
+      res.json(rows);
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao buscar investimentos" });
+    }
+  });
+
+  app.post("/api/investments", authenticateToken, async (req: any, res) => {
+    const { name, type, current_amount } = req.body;
+    try {
+      await query(
+        "INSERT INTO investments (user_id, name, type, current_amount) VALUES (?, ?, ?, ?)",
+        [req.user.id, name, type, current_amount || 0]
+      );
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao criar investimento" });
+    }
+  });
+
+  app.delete("/api/investments/:id", authenticateToken, async (req: any, res) => {
+    try {
+      await query("DELETE FROM investments WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao deletar investimento" });
+    }
+  });
+
   // --- Transactions Routes ---
   app.get("/api/transactions", authenticateToken, async (req: any, res) => {
     try {
@@ -270,12 +310,13 @@ async function startServer() {
   });
 
   app.post("/api/transactions", authenticateToken, async (req: any, res) => {
-    const { amount, category, description, date, type, installments, goal_id } = req.body;
+    const { amount, category, description, date, type, installments, goal_id, investment_id } = req.body;
     const totalInstallments = parseInt(installments) || 1;
 
     try {
-      // ── Resolve goal: prefer explicit goal_id, fallback to category-name match ──
+      // ── Resolve goal/investment: prefer explicit id ──
       let resolvedGoalId: number | null = goal_id || null;
+      let resolvedInvestId: number | null = investment_id || null;
 
       if (!resolvedGoalId && type === 'expense' && category) {
         // Check if the category name matches any goal owned by this user
@@ -288,10 +329,20 @@ async function startServer() {
         }
       }
 
+      if (!resolvedInvestId && type === 'expense' && category) {
+        const { rows: matchedInvests } = await query(
+          "SELECT id FROM investments WHERE user_id = ? AND name = ?",
+          [req.user.id, category]
+        );
+        if (matchedInvests.length > 0) {
+          resolvedInvestId = matchedInvests[0].id;
+        }
+      }
+
       // Insert first (or only) transaction
       const info = await query(
-        "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_num, goal_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [req.user.id, amount, category, description, date, type, totalInstallments, 1, resolvedGoalId]
+        "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_num, goal_id, investment_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [req.user.id, amount, category, description, date, type, totalInstallments, 1, resolvedGoalId, resolvedInvestId]
       );
       const parentId = info.lastInsertRowid;
       console.log(`[INSTALLMENTS] Transação principal criada. ID: ${parentId}, Parcelas: ${totalInstallments}`);
@@ -316,8 +367,8 @@ async function startServer() {
           const nextDateStr = finalDate.toISOString().split('T')[0];
           const installDesc = `${description} (${i}/${totalInstallments})`;
           await query(
-            "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_ref, installment_num, goal_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [req.user.id, amount, category, installDesc, nextDateStr, type, totalInstallments, parentId, i, resolvedGoalId]
+            "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_ref, installment_num, goal_id, investment_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [req.user.id, amount, category, installDesc, nextDateStr, type, totalInstallments, parentId, i, resolvedGoalId, resolvedInvestId]
           );
         }
         // Update first transaction description
@@ -329,10 +380,8 @@ async function startServer() {
         console.log(`[INSTALLMENTS] Sucesso ao gerar parcelas filhas para o pai ${parentId}`);
       }
 
-      // ── Debit goal current_amount (only for the 1st installment; each child counts on its own month) ──
+      // ── Update Goal Balance ──
       if (resolvedGoalId && type === 'expense') {
-        // For installments, only debit the 1st parcel now; the rest will be debited when each future month's entry is posted
-        // (Since all installment children are inserted now, we debit all of them)
         const totalToDebit = totalInstallments > 1 ? amount * totalInstallments : amount;
         await query(
           "UPDATE goals SET current_amount = current_amount + ? WHERE id = ? AND user_id = ?",
@@ -340,7 +389,16 @@ async function startServer() {
         );
       }
 
-      res.json({ id: parentId, installments: totalInstallments, goal_id: resolvedGoalId });
+      // ── Update Investment Balance ──
+      if (resolvedInvestId && type === 'expense') {
+        const totalToDebit = totalInstallments > 1 ? amount * totalInstallments : amount;
+        await query(
+          "UPDATE investments SET current_amount = current_amount + ? WHERE id = ? AND user_id = ?",
+          [totalToDebit, resolvedInvestId, req.user.id]
+        );
+      }
+
+      res.json({ id: parentId, installments: totalInstallments, goal_id: resolvedGoalId, investment_id: resolvedInvestId });
     } catch (error: any) {
       console.error("Erro ao salvar transação:", error);
       res.status(500).json({ error: "Erro ao salvar transação" });
@@ -348,7 +406,7 @@ async function startServer() {
   });
 
   app.put("/api/transactions/:id", authenticateToken, async (req: any, res) => {
-    const { amount, category, description, date, type, installments: newInstallments, goal_id } = req.body;
+    const { amount, category, description, date, type, installments: newInstallments, goal_id, investment_id } = req.body;
     const totalInstallments = parseInt(newInstallments) || 1;
 
     try {
@@ -390,8 +448,8 @@ async function startServer() {
 
         // Re-insert as NEW transaction using finalBaseDate
         const info = await query(
-          "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_num, goal_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          [req.user.id, amount, category, description, finalBaseDate, type, totalInstallments, 1, goal_id]
+          "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_num, goal_id, investment_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [req.user.id, amount, category, description, finalBaseDate, type, totalInstallments, 1, goal_id, investment_id]
         );
         const newParentId = info.lastInsertRowid;
 
@@ -408,8 +466,8 @@ async function startServer() {
             const nextDateStr = finalDate.toISOString().split('T')[0];
             const installDesc = `${description} (${i}/${totalInstallments})`;
             await query(
-              "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_ref, installment_num, goal_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-              [req.user.id, amount, category, installDesc, nextDateStr, type, totalInstallments, newParentId, i, goal_id]
+              "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_ref, installment_num, goal_id, investment_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              [req.user.id, amount, category, installDesc, nextDateStr, type, totalInstallments, newParentId, i, goal_id, investment_id]
             );
           }
           await query("UPDATE transactions SET description = ? WHERE id = ?", [`${description} (1/${totalInstallments})`, newParentId]);
@@ -420,6 +478,11 @@ async function startServer() {
           await query("UPDATE goals SET current_amount = current_amount + ? WHERE id = ? AND user_id = ?", [totalToDebit, goal_id, req.user.id]);
         }
 
+        if (investment_id && type === 'expense') {
+          const totalToDebit = totalInstallments > 1 ? amount * totalInstallments : amount;
+          await query("UPDATE investments SET current_amount = current_amount + ? WHERE id = ? AND user_id = ?", [totalToDebit, investment_id, req.user.id]);
+        }
+
         return res.json({ message: "Série atualizada com sucesso", id: newParentId });
       }
 
@@ -428,14 +491,23 @@ async function startServer() {
       if (t.goal_id && t.type === 'expense') {
         await query("UPDATE goals SET current_amount = CASE WHEN current_amount - ? < 0 THEN 0 ELSE current_amount - ? END WHERE id = ? AND user_id = ?", [t.amount, t.amount, t.goal_id, req.user.id]);
       }
+      
+      // Revert old investment if changed
+      if (t.investment_id && t.type === 'expense') {
+        await query("UPDATE investments SET current_amount = CASE WHEN current_amount - ? < 0 THEN 0 ELSE current_amount - ? END WHERE id = ? AND user_id = ?", [t.amount, t.amount, t.investment_id, req.user.id]);
+      }
 
       await query(
-        "UPDATE transactions SET amount = ?, category = ?, description = ?, date = ?, type = ?, goal_id = ? WHERE id = ? AND user_id = ?",
-        [amount, category, description, date, type, goal_id, req.params.id, req.user.id]
+        "UPDATE transactions SET amount = ?, category = ?, description = ?, date = ?, type = ?, goal_id = ?, investment_id = ? WHERE id = ? AND user_id = ?",
+        [amount, category, description, date, type, goal_id, investment_id, req.params.id, req.user.id]
       );
 
       if (goal_id && type === 'expense') {
         await query("UPDATE goals SET current_amount = current_amount + ? WHERE id = ? AND user_id = ?", [amount, goal_id, req.user.id]);
+      }
+
+      if (investment_id && type === 'expense') {
+        await query("UPDATE investments SET current_amount = current_amount + ? WHERE id = ? AND user_id = ?", [amount, investment_id, req.user.id]);
       }
 
       res.json({ success: true });
@@ -475,6 +547,15 @@ async function startServer() {
           await query(
             "UPDATE goals SET current_amount = CASE WHEN current_amount - ? < 0 THEN 0 ELSE current_amount - ? END WHERE id = ? AND user_id = ?",
             [item.amount, item.amount, itemGoalId, req.user.id]
+          );
+        }
+
+        // Reverse investment contribution
+        let itemInvestId = item.investment_id || null;
+        if (itemInvestId && item.type === 'expense') {
+          await query(
+            "UPDATE investments SET current_amount = CASE WHEN current_amount - ? < 0 THEN 0 ELSE current_amount - ? END WHERE id = ? AND user_id = ?",
+            [item.amount, item.amount, itemInvestId, req.user.id]
           );
         }
       }

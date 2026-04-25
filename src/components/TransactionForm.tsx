@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { motion } from 'motion/react';
 import { X, CreditCard, Target } from 'lucide-react';
-import { Goal } from '../types';
+import { Goal, Investment } from '../types';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import ConfirmModal from './ConfirmModal';
@@ -11,6 +11,7 @@ interface Props {
   onClose: () => void;
   initialType?: 'income' | 'expense';
   goals?: Goal[];
+  investments?: Investment[];
   editTransaction?: any;
   defaultDate?: string; // format: "yyyy-MM"
 }
@@ -24,14 +25,14 @@ const BASE_EXPENSE_CATEGORIES = [
   'Moradia', 'Mercado', 'Assinaturas', 'Despesas Pessoais', 'Seguros', 'Outros'
 ];
 
-// Prefix used to identify goal-categories in the select
-const GOAL_PREFIX = '__GOAL__';
+const INVEST_PREFIX = '__INVEST__';
 
 export default function TransactionForm({
   onSuccess,
   onClose,
   initialType = 'expense',
   goals = [],
+  investments = [],
   editTransaction,
   defaultDate,
 }: Props) {
@@ -40,6 +41,7 @@ export default function TransactionForm({
   const [category, setCategory] = useState(() => {
     if (editTransaction) {
       if (editTransaction.goal_id) return `${GOAL_PREFIX}${editTransaction.goal_id}`;
+      if (editTransaction.investment_id) return `${INVEST_PREFIX}${editTransaction.investment_id}`;
       return editTransaction.category;
     }
     return initialType === 'income' ? 'Salário' : 'Outros';
@@ -67,12 +69,18 @@ export default function TransactionForm({
     [goals]
   );
 
-  // Is the currently selected category a goal?
+  // Is the currently selected category a goal or investment?
   const selectedGoal = useMemo(() => {
     if (!category.startsWith(GOAL_PREFIX)) return null;
     const goalId = parseInt(category.replace(GOAL_PREFIX, ''), 10);
     return goals.find(g => g.id === goalId) ?? null;
   }, [category, goals]);
+
+  const selectedInvestment = useMemo(() => {
+    if (!category.startsWith(INVEST_PREFIX)) return null;
+    const invId = parseInt(category.replace(INVEST_PREFIX, ''), 10);
+    return investments.find(inv => inv.id === invId) ?? null;
+  }, [category, investments]);
 
   const handleTypeChange = (newType: 'income' | 'expense') => {
     setType(newType);
@@ -84,10 +92,12 @@ export default function TransactionForm({
     e.preventDefault();
     setLoading(true);
 
-    // Resolve real category name and goal_id
+    // Resolve real category name and goal_id/investment_id
     const isGoal = !!selectedGoal;
-    const realCategory = isGoal ? selectedGoal!.name : category;
+    const isInvest = !!selectedInvestment;
+    const realCategory = isGoal ? selectedGoal!.name : (isInvest ? selectedInvestment!.name : category);
     const goal_id = isGoal ? selectedGoal!.id : null;
+    const investment_id = isInvest ? selectedInvestment!.id : null;
 
     try {
       const payload: any = {
@@ -98,6 +108,7 @@ export default function TransactionForm({
         date,
         installments: installments > 1 ? installments : 1,
         goal_id,
+        investment_id
       };
 
       const res = await fetch(editTransaction ? `/api/transactions/${editTransaction.id}` : '/api/transactions', {
@@ -121,6 +132,8 @@ export default function TransactionForm({
   };
 
   const isGoalCategory = !!selectedGoal;
+  const isInvestCategory = !!selectedInvestment;
+  const isSpecial = isGoalCategory || isInvestCategory;
 
   return (
     <motion.div
@@ -209,10 +222,10 @@ export default function TransactionForm({
               <label
                 className={cn(
                   'text-[10px] font-black uppercase tracking-widest block mb-2',
-                  isGoalCategory ? 'text-indigo-400' : 'text-slate-400'
+                  isGoalCategory ? 'text-indigo-400' : (isInvestCategory ? 'text-purple-400' : 'text-slate-400')
                 )}
               >
-                {isGoalCategory ? '🎯 Meta' : 'Categoria'}
+                {isGoalCategory ? '🎯 Meta' : (isInvestCategory ? '📈 Investimento' : 'Categoria')}
               </label>
               <select
                 value={category}
@@ -251,6 +264,20 @@ export default function TransactionForm({
                         })}
                       </optgroup>
                     )}
+
+                    {/* Investment categories */}
+                    {investments.length > 0 && (
+                      <optgroup label="📈 Investimentos">
+                        {investments.map(inv => (
+                          <option
+                            key={inv.id}
+                            value={`${INVEST_PREFIX}${inv.id}`}
+                          >
+                            {inv.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
                   </>
                 )}
               </select>
@@ -283,6 +310,19 @@ export default function TransactionForm({
                   <strong>
                     R$ {(selectedGoal.target_amount - selectedGoal.current_amount).toFixed(2)}
                   </strong>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ── Investment info banner ── */}
+          {isInvestCategory && selectedInvestment && (
+            <div className="flex items-center gap-3 p-3 bg-purple-50 border border-purple-200 rounded-2xl">
+              <Plus size={16} className="text-purple-500 shrink-0" />
+              <div className="text-xs">
+                <p className="font-black text-purple-800">{selectedInvestment.name}</p>
+                <p className="text-purple-500">
+                  Saldo Acumulado: <strong>R$ {selectedInvestment.current_amount.toFixed(2)}</strong>
                 </p>
               </div>
             </div>
@@ -353,7 +393,7 @@ export default function TransactionForm({
                 'w-full py-5 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl transition-all disabled:opacity-50',
                 isGoalCategory
                   ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20'
-                  : 'bg-slate-900 hover:bg-black'
+                  : (isInvestCategory ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-500/20' : 'bg-slate-900 hover:bg-black')
               )}
             >
               {loading
@@ -362,6 +402,8 @@ export default function TransactionForm({
                 ? (editTransaction ? `Atualizar Série (${installments}×)` : `Parcelar em ${installments}×`)
                 : isGoalCategory
                 ? `Aportar para "${selectedGoal?.name}"`
+                : isInvestCategory
+                ? `Investir em "${selectedInvestment?.name}"`
                 : (editTransaction ? 'Salvar Alterações' : 'Confirmar Transação')}
             </button>
 

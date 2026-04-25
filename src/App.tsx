@@ -13,6 +13,8 @@ import ChatAssistant from './components/ChatAssistant';
 import Login from './components/Login';
 import GoalList from './components/GoalList';
 import GoalForm from './components/GoalForm';
+import InvestmentPortfolio from './components/InvestmentPortfolio';
+import InvestmentForm from './components/InvestmentForm';
 import ShareSummary from './components/ShareSummary';
 import ManagerPanel from './components/ManagerPanel';
 import SettingsPanel from './components/SettingsPanel';
@@ -26,10 +28,12 @@ export default function App() {
   const { user, token, logout, isLoading: authLoading } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [investments, setInvestments] = useState<Investment[]>([]);
   const [summary, setSummary] = useState<Summary>({ totalIncome: 0, totalExpense: 0 });
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<'income' | 'expense'>('expense');
   const [showGoalForm, setShowGoalForm] = useState(false);
+  const [showInvestForm, setShowInvestForm] = useState(false);
   const [showManager, setShowManager] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -59,10 +63,11 @@ export default function App() {
   const fetchData = useCallback(async () => {
     if (!token) return;
     try {
-      const [tRes, sRes, gRes] = await Promise.all([
+      const [tRes, sRes, gRes, iRes] = await Promise.all([
         fetch('/api/transactions', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/summary', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/goals', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch('/api/goals', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch('/api/investments', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       if (tRes.status === 401 || tRes.status === 403) {
         logout();
@@ -71,9 +76,11 @@ export default function App() {
       const tData = await tRes.json();
       const sData = await sRes.json();
       const gData = await gRes.json();
+      const iData = await iRes.json();
       setTransactions(Array.isArray(tData) ? tData : []);
       setSummary(sData || { totalIncome: 0, totalExpense: 0 });
       setGoals(Array.isArray(gData) ? gData : []);
+      setInvestments(Array.isArray(iData) ? iData : []);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
@@ -260,6 +267,11 @@ export default function App() {
           onRefresh={handleAfterAdd}
         />
 
+        <InvestmentPortfolio
+          investments={investments}
+          onAdd={() => setShowInvestForm(true)}
+        />
+
         <ShareSummary
           summary={{ totalIncome: monthIncome, totalExpense: monthExpense }}
           transactions={monthTransactions}
@@ -313,6 +325,7 @@ export default function App() {
           editTransaction={editTx}
           defaultDate={selectedMonth}
           goals={goals}
+          investments={investments}
           onSuccess={() => {
             handleAfterAdd();
             setShowForm(false);
@@ -328,6 +341,16 @@ export default function App() {
             setShowGoalForm(false);
           }}
           onClose={() => setShowGoalForm(false)}
+        />
+      )}
+
+      {showInvestForm && (
+        <InvestmentForm
+          onSuccess={() => {
+            handleAfterAdd();
+            setShowInvestForm(false);
+          }}
+          onClose={() => setShowInvestForm(false)}
         />
       )}
 
