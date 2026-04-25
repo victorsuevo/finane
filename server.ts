@@ -358,10 +358,11 @@ async function startServer() {
       if (!t) return res.status(404).json({ error: "Transação não encontrada" });
 
       const isSeries = t.installments > 1 || t.installment_ref;
+      const willBeSeries = totalInstallments > 1;
       const parentId = t.installment_ref || t.id;
 
-      if (isSeries) {
-        // --- Cascade Edit: Delete old series and recreate ---
+      if (isSeries || willBeSeries) {
+        // --- Cascade Edit: Delete old (single or series) and recreate ---
         
         // Find all members to revert goals
         const { rows: series } = await query(
