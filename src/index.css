@@ -17,6 +17,44 @@
 
 @layer base {
   body {
-    @apply font-sans bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-50;
+    @apply font-sans bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-50 transition-colors duration-200;
   }
+}
+
+/* Global Dark Mode Overrides for existing light classes */
+.dark .bg-slate-50 {
+  @apply bg-slate-900 !important;
+}
+
+.dark .bg-white {
+  @apply bg-slate-800 !important;
+}
+
+.dark .bg-white\/80 {
+  @apply bg-slate-800\/80 !important;
+}
+
+.dark .text-slate-900 {
+  @apply text-slate-50 !important;
+}
+
+.dark .text-slate-800 {
+  @apply text-slate-100 !important;
+}
+
+.dark .text-slate-600 {
+  @apply text-slate-300 !important;
+}
+
+.dark .text-slate-500 {
+  @apply text-slate-400 !important;
+}
+
+.dark .border-slate-100, .dark .border-slate-200 {
+  @apply border-slate-700 !important;
+}
+
+/* Exception for the assistant button */
+.dark .text-white {
+  @apply text-white !important;
 }
