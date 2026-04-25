@@ -134,7 +134,7 @@ export default function HistoryModal({ isOpen, onClose, transactions, onNavigate
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
                 Exibindo {filtered.length} de {transactions.length} registros
               </p>
-              <button onClick={onClose} className="px-6 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-transform">
+              <button onClick={onClose} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-transform shadow-lg shadow-indigo-500/20">
                 Fechar
               </button>
             </div>
