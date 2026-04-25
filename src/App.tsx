@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Wallet, TrendingUp, TrendingDown, Crown, Save, Check, ChevronLeft, ChevronRight, Search } from 'lucide-react';
-import { Transaction, Summary, Goal } from './types';
-import { formatCurrency } from './lib/utils';
+import { Transaction, Summary, Goal, Investment } from './types';
+import { formatCurrency, cn } from './lib/utils';
 import { format, subMonths, addMonths, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import TransactionForm from './components/TransactionForm';
