@@ -512,32 +512,6 @@ async function startServer() {
     }
   });
 
-  // Serve static files
-  const distPath = path.join(process.cwd(), "dist");
-  const publicPath = path.join(process.cwd(), "public");
-
-  app.use(express.static(publicPath));
-  if (fs.existsSync(distPath)) {
-    app.use(express.static(distPath));
-  }
-
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    app.get("*", (req, res) => {
-      const indexFile = path.join(distPath, "index.html");
-      if (fs.existsSync(indexFile)) {
-        res.sendFile(indexFile);
-      } else {
-        res.status(404).send("App ainda em carregamento... Por favor, atualize em alguns segundos.");
-      }
-    });
-  }
-
   // --- AI Routes ---
   const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || "").trim();
   const GROQ_API_KEY = (process.env.GROQ_API_KEY || "").trim();
@@ -634,7 +608,34 @@ async function startServer() {
     }
   });
 
-  await setupTables();
+
+  // Serve static files
+  const distPath = path.join(process.cwd(), "dist");
+  const publicPath = path.join(process.cwd(), "public");
+
+  app.use(express.static(publicPath));
+  if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    app.get("*", (req, res) => {
+      const indexFile = path.join(distPath, "index.html");
+      if (fs.existsSync(indexFile)) {
+        res.sendFile(indexFile);
+      } else {
+        res.status(404).send("App ainda em carregamento... Por favor, atualize em alguns segundos.");
+      }
+    });
+  }
+
+    await setupTables();
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`\n✅ SUEVO ONLINE EM: http://0.0.0.0:${PORT}\n`);
