@@ -285,18 +285,28 @@ export default function TransactionForm({
             </div>
 
             {/* Date */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 relative">
-              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-2">
+            <div 
+              className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 relative cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors group"
+              onClick={() => {
+                const input = document.getElementById('date-input') as HTMLInputElement;
+                if (input && 'showPicker' in input) input.showPicker();
+                else if (input) input.focus();
+              }}
+            >
+              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-2 pointer-events-none">
                 Data
               </label>
               <div className="flex items-center justify-between gap-2">
                 <input
+                  id="date-input"
                   type="date"
                   value={date}
                   onChange={e => setDate(e.target.value)}
-                  className="flex-1 bg-transparent border-none text-sm font-bold text-slate-900 dark:text-white focus:ring-0 p-0 dark:[color-scheme:dark] [&::-webkit-calendar-picker-indicator]:hidden"
+                  className="flex-1 bg-transparent border-none text-sm font-bold text-slate-900 dark:text-white focus:ring-0 p-0 dark:[color-scheme:dark] [&::-webkit-calendar-picker-indicator]:hidden cursor-pointer"
                 />
-                <Calendar size={16} className="text-slate-400 dark:text-slate-500 pointer-events-none" />
+                <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-800 group-hover:scale-110 transition-transform">
+                  <Calendar size={14} className="text-slate-400 dark:text-slate-500" />
+                </div>
               </div>
             </div>
           </div>
