@@ -277,7 +277,7 @@ export default function App() {
       {showManager && <ManagerPanel onClose={() => setShowManager(false)} />}
       {showSettings && <SettingsPanel onClose={() => { setShowSettings(false); fetchData(); }} />}
       {showHelp && <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />}
-      {showHistory && <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} transactions={transactions} />}
+      {showHistory && <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} transactions={transactions} onNavigate={(monthKey) => { setSelectedMonth(monthKey); setShowHistory(false); }} />}
 
       <ConfirmModal
         isOpen={!!deleteTx}

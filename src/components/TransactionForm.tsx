@@ -293,7 +293,7 @@ export default function TransactionForm({
                 type="date"
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="w-full bg-transparent border-none text-sm font-bold text-slate-900 dark:text-white focus:ring-0 p-0 [color-scheme:light_dark]"
+                className="w-full bg-transparent border-none text-sm font-bold text-slate-900 dark:text-white focus:ring-0 p-0 dark:[color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-50 dark:[&::-webkit-calendar-picker-indicator]:invert"
               />
             </div>
           </div>

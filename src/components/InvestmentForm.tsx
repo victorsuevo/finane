@@ -119,10 +119,10 @@ export default function InvestmentForm({ onSuccess, onClose, editInvestment }: P
             <input
               required
               type="text"
-              placeholder="Ex: Tesouro Selic 2029"
+              placeholder={type === 'renda_fixa' ? 'Ex: Tesouro Selic, CDB...' : type === 'renda_variavel' ? 'Ex: Ações, FIIs, PETR4...' : type === 'cripto' ? 'Ex: Bitcoin, Ethereum...' : 'Ex: Poupança, Conta Corrente...'}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl py-4 px-6 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-300 focus:ring-2 focus:ring-indigo-100 transition-all"
+              className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl py-4 px-6 text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-indigo-100 transition-all"
             />
           </div>
 

@@ -16,7 +16,7 @@ interface Props {
   investments: Investment[];
 }
 
-const COLORS = ['#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#ef4444', '#f97316', '#f59e0b', '#eab308'];
+const COLORS = ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#8b5cf6', '#14b8a6', '#f43f5e', '#06b6d4'];
 
 export default function CategoryChart({ transactions = [], currentMonth, investments = [] }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -125,8 +125,8 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
               tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }}
             />
             <Tooltip 
-              cursor={{ fill: '#f8fafc' }}
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
+              cursor={{ fill: 'rgba(148, 163, 184, 0.1)' }}
+              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', backgroundColor: 'rgba(15, 23, 42, 0.9)', color: '#fff' }}
               formatter={(value: number) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), 'Gasto']}
             />
             <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={12}>
@@ -156,7 +156,7 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
               {investmentDistribution.map((_, i) => <Cell key={i} fill={COLORS[(i + 2) % COLORS.length]} />)}
             </Pie>
             <Tooltip 
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
+              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', backgroundColor: 'rgba(15, 23, 42, 0.9)', color: '#fff' }}
               formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             />
             <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: '9px', fontWeight: 600 }} />
@@ -176,7 +176,7 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
             <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} />
             <YAxis hide />
             <Tooltip 
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
+              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', backgroundColor: 'rgba(15, 23, 42, 0.9)', color: '#fff' }}
             />
             <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 700, paddingTop: '10px' }} />
             <Line type="monotone" dataKey="income" name="Entradas" stroke="#10b981" strokeWidth={3} dot={{ r: 4, fill: '#10b981' }} />
@@ -201,7 +201,7 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
             </defs>
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} />
             <Tooltip 
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
+              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', backgroundColor: 'rgba(15, 23, 42, 0.9)', color: '#fff' }}
               formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             />
             <Area type="monotone" dataKey="saldo" name="Patrimônio" stroke="#6366f1" fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={3} />
@@ -215,16 +215,16 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
   const prevChart = () => setActiveIndex((prev) => (prev - 1 + charts.length) % charts.length);
 
   return (
-    <div className="mx-5 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden relative group">
+    <div className="mx-5 bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden relative group">
       <div className="p-6 pb-2 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-indigo-600">{charts[activeIndex].icon}</span>
-            <h3 className="font-black text-sm text-slate-900 tracking-tight uppercase">
+            <span className="text-indigo-600 dark:text-indigo-400">{charts[activeIndex].icon}</span>
+            <h3 className="font-black text-sm text-slate-900 dark:text-white tracking-tight uppercase">
               {charts[activeIndex].title}
             </h3>
           </div>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">
             {charts[activeIndex].subtitle}
           </p>
         </div>
@@ -232,13 +232,13 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
         <div className="flex items-center gap-1.5">
           <button 
             onClick={prevChart}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-all"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
           >
             <ChevronLeft size={16} />
           </button>
           <button 
             onClick={nextChart}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-all"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
           >
             <ChevronRight size={16} />
           </button>

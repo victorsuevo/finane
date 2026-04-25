@@ -10,9 +10,10 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   transactions: Transaction[];
+  onNavigate?: (monthKey: string) => void;
 }
 
-export default function HistoryModal({ isOpen, onClose, transactions }: Props) {
+export default function HistoryModal({ isOpen, onClose, transactions, onNavigate }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState('');
 
@@ -84,7 +85,16 @@ export default function HistoryModal({ isOpen, onClose, transactions }: Props) {
                 filtered.map((t) => (
                   <div 
                     key={t.id} 
-                    className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 flex items-center justify-between shadow-sm hover:shadow-md transition-all group"
+                    onClick={() => {
+                      if (onNavigate) {
+                         const monthKey = t.date.substring(0, 7);
+                         onNavigate(monthKey);
+                      }
+                    }}
+                    className={cn(
+                      "bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 flex items-center justify-between shadow-sm hover:shadow-md transition-all group",
+                      onNavigate ? "cursor-pointer" : ""
+                    )}
                   >
                     <div className="flex items-center gap-4">
                       <div className={cn(

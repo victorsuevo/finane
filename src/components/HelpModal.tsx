@@ -40,7 +40,7 @@ export default function HelpModal({ isOpen, onClose }: Props) {
                   <h3 className="font-black text-xs uppercase tracking-widest">Painel Principal</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  O painel exibe o resumo financeiro do mês selecionado. O <strong>Patrimônio Real</strong> apresenta a soma do saldo em conta corrente com o valor total alocado em investimentos. Os gráficos detalham a distribuição de despesas por categoria e a composição da carteira de ativos.
+                  O painel exibe o resumo financeiro do mês selecionado. O <strong>Patrimônio Real</strong> apresenta a soma do saldo em conta corrente com o valor total alocado em investimentos. Os gráficos detalham a distribuição de despesas por categoria e a evolução da sua carteira. Navegue pelos meses utilizando as setas direcionais no topo da tela.
                 </p>
               </section>
 
@@ -50,17 +50,17 @@ export default function HelpModal({ isOpen, onClose }: Props) {
                   <h3 className="font-black text-xs uppercase tracking-widest">Gestão de Transações</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Utilize o botão flutuante (+) para registrar novas receitas ou despesas. Transações podem ser categorizadas, parceladas ou vinculadas a metas e investimentos específicos. Para editar ou excluir um registro, utilize as opções disponíveis ao lado de cada transação listada.
+                  Utilize o botão flutuante (+) para registrar novas receitas ou despesas. Transações podem ser categorizadas, parceladas ou vinculadas a metas e investimentos específicos. Ao lançar uma despesa e classificá-la como "Investimento", o sistema automaticamente deduzirá o valor da sua conta principal e o adicionará à carteira selecionada.
                 </p>
               </section>
 
               <section className="space-y-4">
                 <div className="flex items-center gap-2 text-rose-600">
                   <Target size={18} />
-                  <h3 className="font-black text-xs uppercase tracking-widest">Metas e Investimentos</h3>
+                  <h3 className="font-black text-xs uppercase tracking-widest">Carteira de Ativos e Metas</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Crie metas de economia ou adicione ativos à carteira de investimentos. Para modificar os dados de um investimento ou meta existente, clique no ícone de edição associado ao item correspondente.
+                  Gerencie sua carteira adicionando ativos (Renda Fixa, Variável, Criptomoedas, etc.) através do painel de investimentos. Para modificar os dados de um investimento ou meta já lançada, clique no ícone de lápis (editar) associado ao item correspondente na tela principal.
                 </p>
               </section>
 
@@ -70,7 +70,17 @@ export default function HelpModal({ isOpen, onClose }: Props) {
                   <h3 className="font-black text-xs uppercase tracking-widest">Histórico e Filtros</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Acesse o histórico completo clicando no ícone de busca. A ferramenta permite filtrar transações anteriores por descrição, categoria ou período específico, facilitando a auditoria dos lançamentos.
+                  Acesse o histórico completo clicando no ícone de busca (lupa) na seção de transações do mês. A ferramenta permite filtrar transações anteriores por descrição, categoria ou período. Ao clicar sobre uma transação no histórico, o sistema navegará automaticamente para o mês correspondente.
+                </p>
+              </section>
+              
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-purple-600">
+                  <Sparkles size={18} />
+                  <h3 className="font-black text-xs uppercase tracking-widest">Inteligência Artificial</h3>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  O assistente integrado analisa seus hábitos de consumo e fornece dicas personalizadas com base no seu histórico recente. Você pode interagir com o chat no canto inferior esquerdo para fazer perguntas específicas sobre suas finanças ou solicitar resumos de gastos.
                 </p>
               </section>
             </div>

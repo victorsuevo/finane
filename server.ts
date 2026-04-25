@@ -729,7 +729,7 @@ async function startServer() {
             'Authorization': `Bearer ${GROQ_API_KEY}`
           },
           body: JSON.stringify({
-            model: "llama3-8b-8192", // Smaller model with higher rate limits
+            model: "llama-3.1-8b-instant", // Recommended fallback model
             messages: [{ role: "user", content: prompt }]
           })
         });
