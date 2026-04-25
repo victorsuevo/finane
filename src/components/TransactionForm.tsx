@@ -4,6 +4,7 @@ import { X, CreditCard, Target } from 'lucide-react';
 import { Goal } from '../types';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import ConfirmModal from './ConfirmModal';
 
 interface Props {
   onSuccess: () => void;
@@ -52,6 +53,7 @@ export default function TransactionForm({
   });
   const [installments, setInstallments] = useState(editTransaction ? editTransaction.installments : 1);
   const [loading, setLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { token } = useAuth();
 
   // Active (not completed) goals for the dropdown
@@ -356,25 +358,7 @@ export default function TransactionForm({
             {editTransaction && (
               <button
                 type="button"
-                onClick={async () => {
-                  if (window.confirm('Deseja excluir esta transação? Se for parcelada, toda a série será removida.')) {
-                    setLoading(true);
-                    try {
-                      const res = await fetch(`/api/transactions/${editTransaction.id}`, {
-                        method: 'DELETE',
-                        headers: { Authorization: `Bearer ${token}` }
-                      });
-                      if (res.ok) {
-                        onSuccess();
-                        onClose();
-                      }
-                    } catch (err) {
-                      console.error(err);
-                    } finally {
-                      setLoading(false);
-                    }
-                  }
-                }}
+                onClick={() => setShowDeleteConfirm(true)}
                 className="w-full py-4 text-rose-500 font-bold text-xs uppercase tracking-widest hover:bg-rose-50 rounded-[1.5rem] transition-colors"
               >
                 Excluir {editTransaction.installments > 1 || editTransaction.installment_ref ? 'Série Completa' : 'Transação'}
@@ -382,6 +366,31 @@ export default function TransactionForm({
             )}
           </div>
         </form>
+
+        <ConfirmModal
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={async () => {
+            setLoading(true);
+            try {
+              const res = await fetch(`/api/transactions/${editTransaction.id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              if (res.ok) {
+                onSuccess();
+                onClose();
+              }
+            } catch (err) {
+              console.error(err);
+            } finally {
+              setLoading(false);
+            }
+          }}
+          title="Tem certeza?"
+          message={`Você está prestes a excluir ${editTransaction.installments > 1 || editTransaction.installment_ref ? 'toda a série de parcelas desta compra' : 'esta transação'}. Esta ação não pode ser desfeita.`}
+          confirmLabel="Sim, Excluir"
+        />
       </motion.div>
     </motion.div>
   );

@@ -16,6 +16,7 @@ import GoalForm from './components/GoalForm';
 import ShareSummary from './components/ShareSummary';
 import ManagerPanel from './components/ManagerPanel';
 import SettingsPanel from './components/SettingsPanel';
+import ConfirmModal from './components/ConfirmModal';
 import { useAuth } from './contexts/AuthContext';
 import { LogOut } from 'lucide-react';
 
@@ -32,6 +33,7 @@ export default function App() {
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [deleteId, setDeleteId] = useState<number | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
 
   const handlePrevMonth = () => {
@@ -97,12 +99,18 @@ export default function App() {
     setTimeout(() => setSaveStatus('idle'), 2000);
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: number) => {
+    setDeleteId(id);
+  };
+
+  const executeDelete = async () => {
+    if (!deleteId) return;
     try {
-      await fetch(`/api/transactions/${id}`, {
+      await fetch(`/api/transactions/${deleteId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      setDeleteId(null);
       await handleAfterAdd();
     } catch (error) {
       console.error('Erro ao deletar:', error);
@@ -303,6 +311,15 @@ export default function App() {
       {showSettings && (
         <SettingsPanel onClose={() => setShowSettings(false)} />
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={executeDelete}
+        title="Excluir Transação?"
+        message="Tem certeza que deseja remover este registro? Se for uma compra parcelada, TODAS as parcelas da série serão excluídas."
+        confirmLabel="Sim, Excluir"
+      />
     </div>
   );
 }
