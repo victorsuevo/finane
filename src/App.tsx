@@ -134,10 +134,11 @@ export default function App() {
     }
   };
 
-  const balance = (summary.totalIncome || 0) - (summary.totalExpense || 0);
+  const globalBalance = (summary.totalIncome || 0) - (summary.totalExpense || 0);
   const monthTransactions = transactions.filter(t => t.date.startsWith(selectedMonth));
   const monthIncome = monthTransactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const monthExpense = monthTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const monthBalance = monthIncome - monthExpense;
 
   if (authLoading) return null;
   if (!user) return <Login />;
@@ -214,10 +215,30 @@ export default function App() {
       <main className="max-w-md mx-auto pt-24 pb-12 space-y-6">
         {/* Balance Section */}
         <div className="px-5">
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Saldo Atual</p>
-          <h2 className={`text-4xl font-bold tracking-tight ${balance >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>
-            {formatCurrency(balance)}
-          </h2>
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black mb-1">
+                Resultado do Mês
+              </p>
+              <h2 className={cn(
+                "text-4xl font-black tracking-tighter leading-none transition-colors",
+                monthBalance >= 0 ? "text-slate-900" : "text-rose-600"
+              )}>
+                {monthBalance > 0 && "+ "}{formatCurrency(monthBalance)}
+              </h2>
+            </div>
+            <div className="text-right pb-1">
+              <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black mb-0.5">
+                Patrimônio Geral
+              </p>
+              <p className={cn(
+                "text-sm font-black tracking-tight",
+                globalBalance >= 0 ? "text-emerald-600" : "text-rose-500"
+              )}>
+                {formatCurrency(globalBalance)}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Month Navigator */}
