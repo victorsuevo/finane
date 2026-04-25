@@ -11,145 +11,77 @@ interface Props {
   transactions: Transaction[];
   goals?: Goal[];
   userName?: string;
+  currentMonth: string;
 }
 
-export default function ShareSummary({ summary, transactions, goals = [], userName }: Props) {
+export default function ShareSummary({ summary, transactions, goals = [], userName, currentMonth }: Props) {
   const [copied, setCopied] = React.useState(false);
 
   const generateReport = () => {
     const now = new Date();
-    const dateStr = format(now, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    const dateStr = format(now, "dd/MM/yy 'às' HH:mm", { locale: ptBR });
+    
+    // Parse currentMonth string to date for labels
+    const currentMonthDate = parseISO(`${currentMonth}-01`);
+    const monthName = format(currentMonthDate, "MMMM/yyyy", { locale: ptBR });
+
+    // Global Balance
     const balance = (summary.totalIncome || 0) - (summary.totalExpense || 0);
 
-    // Group current month transactions
-    const currentMonth = format(now, 'yyyy-MM');
+    // Monthly Data based on system month
     const monthTx = transactions.filter(t => t.date.startsWith(currentMonth));
-    const prevMonths = transactions.filter(t => !t.date.startsWith(currentMonth));
-
-    // Category breakdown for current month
-    const expenseByCategory: Record<string, number> = {};
-    monthTx.filter(t => t.type === 'expense').forEach(t => {
-      expenseByCategory[t.category] = (expenseByCategory[t.category] || 0) + t.amount;
-    });
-
-    const incomeByCategory: Record<string, number> = {};
-    monthTx.filter(t => t.type === 'income').forEach(t => {
-      incomeByCategory[t.category] = (incomeByCategory[t.category] || 0) + t.amount;
-    });
-
     const monthIncome = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
     const monthExpense = monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
     const monthBalance = monthIncome - monthExpense;
 
-    let report = '';
-    report += `╔═══════════════════════════╗\n`;
-    report += `║  📊 RELATÓRIO SUEVO  ║\n`;
-    report += `╚═══════════════════════════╝\n`;
-    report += `👤 *${userName || 'Usuário'}*\n`;
-    report += `🗓️ Emitido em: ${dateStr}\n`;
-    report += `\n`;
+    const DIVIDER = "─────────────";
 
-    // Overall balance
-    report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    let report = `📊 *RELATÓRIO SUEVO*\n`;
+    report += `👤 ${userName || 'Usuário'}\n`;
+    report += `🗓️ ${dateStr}\n\n`;
+
     report += `💼 *SALDO GERAL*\n`;
-    report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    report += `📈 Entradas totais:   ${formatCurrency(summary.totalIncome || 0)}\n`;
-    report += `📉 Saídas totais:     ${formatCurrency(summary.totalExpense || 0)}\n`;
-    report += `${balance >= 0 ? '✅' : '⚠️'} Saldo atual:       *${formatCurrency(balance)}*\n\n`;
+    report += `In: ${formatCurrency(summary.totalIncome || 0)}\n`;
+    report += `Out: ${formatCurrency(summary.totalExpense || 0)}\n`;
+    report += `✅ *Total: ${formatCurrency(balance)}*\n\n`;
 
-    // Current month
-    const monthName = format(now, "MMMM/yyyy", { locale: ptBR });
-    report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
     report += `📅 *${monthName.toUpperCase()}*\n`;
-    report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    report += `📈 Entradas: ${formatCurrency(monthIncome)}\n`;
-    report += `📉 Saídas:   ${formatCurrency(monthExpense)}\n`;
+    report += `Entradas: ${formatCurrency(monthIncome)}\n`;
+    report += `Saídas: ${formatCurrency(monthExpense)}\n`;
     report += `${monthBalance >= 0 ? '🟢' : '🔴'} Balanço: ${formatCurrency(monthBalance)}\n\n`;
 
-    // Month transactions details
-    if (monthTx.length > 0) {
-      report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-      report += `📜 *TRANSAÇÕES DO MÊS*\n`;
-      report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-      monthTx.forEach(t => {
-        const dateLabel = format(parseISO(t.date), 'dd/MM', { locale: ptBR });
-        const icon = t.type === 'income' ? '🟩' : '🟥';
-        const desc = t.description || t.category;
-        report += `${icon} ${dateLabel} · ${desc}: ${formatCurrency(t.amount)}\n`;
-      });
-      report += `\n`;
-    }
-
-    // Income breakdown
-    if (Object.keys(incomeByCategory).length > 0) {
-      report += `💚 *Entradas por categoria:*\n`;
-      Object.entries(incomeByCategory)
-        .sort((a, b) => b[1] - a[1])
-        .forEach(([cat, val]) => {
-          report += `  • ${cat}: ${formatCurrency(val)}\n`;
-        });
-      report += `\n`;
-    }
-
-    // Expense breakdown
-    if (Object.keys(expenseByCategory).length > 0) {
-      report += `❤️ *Saídas por categoria:*\n`;
-      Object.entries(expenseByCategory)
-        .sort((a, b) => b[1] - a[1])
-        .forEach(([cat, val]) => {
-          const pct = monthExpense > 0 ? ((val / monthExpense) * 100).toFixed(0) : 0;
-          report += `  • ${cat}: ${formatCurrency(val)} (${pct}%)\n`;
-        });
-      report += `\n`;
-    }
-
-    // Goals
     if (goals.length > 0) {
-      report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
       report += `🎯 *METAS*\n`;
-      report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
       goals.forEach(g => {
         const pct = Math.min(Math.round((g.current_amount / g.target_amount) * 100), 100);
-        const remaining = g.target_amount - g.current_amount;
         const bar = '█'.repeat(Math.floor(pct / 10)) + '░'.repeat(10 - Math.floor(pct / 10));
-        report += `🏆 *${g.name}*\n`;
-        report += `   [${bar}] ${pct}%\n`;
-        report += `   Guardado: ${formatCurrency(g.current_amount)} / Meta: ${formatCurrency(g.target_amount)}\n`;
-        if (remaining > 0) {
-          report += `   Faltam: ${formatCurrency(remaining)}\n`;
-        } else {
-          report += `   ✅ Meta atingida!\n`;
-        }
-        if (g.deadline) report += `   📅 Prazo: ${g.deadline}\n`;
-        report += `\n`;
-      });
-    }
-
-    // Installments active
-    const installmentTx = transactions.filter(t => t.installments && t.installments > 1 && t.installment_ref == null);
-    if (installmentTx.length > 0) {
-      report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-      report += `💳 *PARCELAS ATIVAS*\n`;
-      report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-      installmentTx.slice(0, 5).forEach(t => {
-        const desc = t.description?.replace(` (1/${t.installments})`, '') || t.category;
-        report += `  • ${desc}: ${formatCurrency(t.amount)}/mês × ${t.installments}×\n`;
+        report += `🏆 ${g.name} (${pct}%)\n`;
+        report += `[${bar}] ${formatCurrency(g.current_amount)}\n`;
       });
       report += `\n`;
     }
 
-    // Last 5 transactions
-    report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    report += `🕐 *ÚLTIMAS TRANSAÇÕES*\n`;
-    report += `━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-    transactions.slice(0, 8).forEach(t => {
-      const icon = t.type === 'income' ? '✅' : t.goal_id ? '🎯' : '❌';
-      const dateLabel = format(parseISO(t.date), 'dd/MM', { locale: ptBR });
-      report += `${icon} ${dateLabel} · ${t.description || t.category}: *${formatCurrency(t.amount)}*\n`;
-    });
+    const installmentTx = transactions.filter(t => t.installments && t.installments > 1 && t.installment_ref == null);
+    if (installmentTx.length > 0) {
+      report += `💳 *PARCELAS ATIVAS*\n`;
+      installmentTx.slice(0, 5).forEach(t => {
+        const cleanDesc = t.description?.split(' (')[0] || t.category;
+        report += `• ${cleanDesc}: ${formatCurrency(t.amount)} (${t.installments}x)\n`;
+      });
+      report += `\n`;
+    }
+
+    if (monthTx.length > 0) {
+      report += `🕐 *LANÇAMENTOS DO MÊS*\n`;
+      monthTx.slice(0, 10).forEach(t => {
+        const icon = t.type === 'income' ? '➕' : '➖';
+        const dateLabel = format(parseISO(t.date), 'dd/MM');
+        const cleanDesc = t.description?.split(' (')[0] || t.category;
+        report += `${icon} ${dateLabel} ${cleanDesc}: *${formatCurrency(t.amount)}*\n`;
+      });
+    }
 
     report += `\n_Gerado pelo SUEVO App_ 🚀`;
-
     return report;
   };
 

@@ -217,7 +217,16 @@ export default function App() {
         <InvestmentPortfolio investments={investments} onAdd={() => { setEditInvest(null); setShowInvestForm(true); }} onRefresh={handleAfterAdd} onEdit={(inv) => { setEditInvest(inv); setShowInvestForm(true); }} />
 
         {/* Compartilhar */}
-        <ShareSummary summary={{ totalIncome: monthIncome, totalExpense: monthExpense }} transactions={monthTransactions} goals={goals} userName={user.name} />
+        <ShareSummary 
+          currentMonth={selectedMonth}
+          summary={{ 
+            totalIncome: transactions.filter(t => t.type === 'income').reduce((s, t) => s + (t.amount || 0), 0), 
+            totalExpense: transactions.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount || 0), 0)
+          }} 
+          transactions={monthTransactions} 
+          goals={goals} 
+          userName={user.name} 
+        />
 
         {/* Insights IA */}
         <AIInsights transactions={monthTransactions} goals={goals} />
