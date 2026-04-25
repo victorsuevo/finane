@@ -1,8 +1,8 @@
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import './index.css';
+import { AuthProvider } from './contexts/AuthContext';
 
-// Teste radical: se isso não aparecer, o erro é no Vite/CSS/React
 const Test = () => (
   <div style={{ 
     height: '100vh', 
@@ -14,12 +14,14 @@ const Test = () => (
     fontFamily: 'sans-serif',
     fontWeight: 'bold'
   }}>
-    SISTEMA OPERACIONAL: OK - AGUARDANDO NÚCLEO...
+    SISTEMA OPERACIONAL: OK - NÚCLEO ATIVO ✅
   </div>
 );
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Test />
+    <AuthProvider>
+      <Test />
+    </AuthProvider>
   </StrictMode>,
 );
