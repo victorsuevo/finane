@@ -54,6 +54,14 @@
   border-color: var(--color-slate-700) !important;
 }
 
+.dark .bg-slate-100 {
+  background-color: var(--color-slate-900) !important;
+}
+
+.dark input, .dark select, .dark textarea {
+  color: var(--color-slate-50) !important;
+}
+
 /* Exception for items that must remain white */
 .dark .text-white {
   color: white !important;
