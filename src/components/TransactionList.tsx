@@ -148,12 +148,22 @@ export default function TransactionList({ transactions, onDelete, onEdit }: Prop
                       </p>
                       <button
                         onClick={() => onDelete(t)}
-                        className="p-2 text-slate-200 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-2 text-slate-300 dark:text-slate-500 hover:text-red-500 dark:hover:text-rose-400 transition-colors"
                         title={t.installments && t.installments > 1 && !t.installment_ref ? 'Deletar todas as parcelas' : 'Deletar'}
                       >
                         <Trash2 size={16} />
                       </button>
-                      {onEdit && <button onClick={() => onEdit(t)} className="p-2 text-slate-200 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>}
+                      {onEdit && (
+                        <button 
+                          onClick={() => onEdit(t)} 
+                          className="p-2 text-slate-300 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil">
+                            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                            <path d="m15 5 4 4"/>
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </div>
                 );

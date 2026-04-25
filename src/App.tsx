@@ -255,7 +255,7 @@ export default function App() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => { setFormType('expense'); setEditTx(null); setShowForm(true); }} 
-        className="fixed bottom-8 right-8 w-14 h-14 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl shadow-2xl z-50 flex items-center justify-center transition-all active:rotate-90"
+        className="fixed bottom-8 right-8 w-14 h-14 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl shadow-2xl z-50 flex items-center justify-center transition-all active:rotate-90"
       >
         <Plus size={28} />
       </motion.button>
