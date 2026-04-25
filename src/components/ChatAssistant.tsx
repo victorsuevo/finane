@@ -79,7 +79,7 @@ export default function ChatAssistant({ transactions, goals = [] }: Props) {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="fixed bottom-24 left-6 right-6 sm:left-auto sm:right-auto sm:w-[400px] bg-white rounded-3xl shadow-2xl z-[60] overflow-hidden flex flex-col border border-slate-100 h-[500px]"
+            className="fixed bottom-24 left-6 right-6 sm:left-auto sm:right-auto sm:w-[400px] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl z-[60] overflow-hidden flex flex-col border border-slate-100 dark:border-slate-800 h-[500px]"
           >
             {/* Header */}
             <div className="p-4 bg-indigo-600 text-white flex items-center justify-between">
@@ -93,18 +93,18 @@ export default function ChatAssistant({ transactions, goals = [] }: Props) {
             </div>
 
             {/* Messages Area */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 dark:bg-slate-900/50">
               {messages.map((msg, i) => (
                 <div key={i} className={cn("flex gap-2 max-w-[85%]", msg.role === 'user' ? "ml-auto flex-row-reverse" : "")}>
                   <div className={cn(
                     "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-1",
-                    msg.role === 'assistant' ? "bg-indigo-100 text-indigo-600" : "bg-slate-200 text-slate-600"
+                    msg.role === 'assistant' ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400" : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
                   )}>
                     {msg.role === 'assistant' ? <Bot size={14} /> : <User size={14} />}
                   </div>
                   <div className={cn(
                     "p-3 rounded-2xl text-[11px] leading-relaxed shadow-sm prose prose-sm max-w-none prose-p:my-0 prose-strong:font-bold prose-headings:text-sm prose-headings:my-1",
-                    msg.role === 'assistant' ? "bg-white text-slate-800 prose-slate" : "bg-indigo-600 text-white prose-invert"
+                    msg.role === 'assistant' ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 prose-slate dark:prose-invert" : "bg-indigo-600 text-white prose-invert"
                   )}>
                     <ReactMarkdown>{msg.text}</ReactMarkdown>
                   </div>
@@ -124,12 +124,12 @@ export default function ChatAssistant({ transactions, goals = [] }: Props) {
             </div>
 
             {/* Input Area */}
-            <form onSubmit={handleSend} className="p-4 bg-white border-t border-slate-100 flex gap-2">
+            <form onSubmit={handleSend} className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex gap-2">
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Pergunte algo ao SUEVO..."
-                className="flex-1 bg-slate-100 rounded-xl px-4 py-2 text-xs font-bold border-none focus:ring-2 focus:ring-indigo-500 placeholder:text-slate-300"
+                className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2 text-xs font-bold border-none focus:ring-2 focus:ring-indigo-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
               />
               <button
                 type="submit"
