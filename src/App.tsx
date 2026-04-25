@@ -20,6 +20,7 @@ import HelpModal from './components/HelpModal';
 import ChatAssistant from './components/ChatAssistant';
 import ShareSummary from './components/ShareSummary';
 import HistoryModal from './components/HistoryModal';
+import ConfirmModal from './components/ConfirmModal';
 import { useAuth } from './contexts/AuthContext';
 
 export default function App() {
@@ -43,6 +44,7 @@ export default function App() {
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [editGoal, setEditGoal] = useState<Goal | null>(null);
   const [editInvest, setEditInvest] = useState<Investment | null>(null);
+  const [deleteTx, setDeleteTx] = useState<Transaction | null>(null);
   
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
@@ -84,6 +86,22 @@ export default function App() {
     await fetchData();
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 2000);
+  };
+
+  const handleDeleteTx = async () => {
+    if (!deleteTx || !deleteTx.id) return;
+    try {
+      const res = await fetch(`/api/transactions/${deleteTx.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setDeleteTx(null);
+        handleAfterAdd();
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handlePrevMonth = () => setSelectedMonth(prev => format(subMonths(parseISO(`${prev}-01`), 1), 'yyyy-MM'));
@@ -217,7 +235,7 @@ export default function App() {
           </div>
           <TransactionList 
             transactions={monthTransactions} 
-            onDelete={() => fetchData()} 
+            onDelete={(t) => setDeleteTx(t)} 
             onEdit={(t) => { setEditTx(t); setFormType(t.type); setShowForm(true); }} 
           />
         </div>
@@ -260,6 +278,15 @@ export default function App() {
       {showSettings && <SettingsPanel onClose={() => { setShowSettings(false); fetchData(); }} />}
       {showHelp && <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />}
       {showHistory && <HistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} transactions={transactions} />}
+
+      <ConfirmModal
+        isOpen={!!deleteTx}
+        onClose={() => setDeleteTx(null)}
+        onConfirm={handleDeleteTx}
+        title="Excluir Transação"
+        message={deleteTx && (deleteTx.installments > 1 || deleteTx.installment_ref) ? 'Tem certeza que deseja excluir esta série de parcelas? Todas as parcelas vinculadas a esta compra serão excluídas e o valor será revertido.' : 'Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.'}
+        confirmLabel="Sim, Excluir"
+      />
     </div>
   );
 }

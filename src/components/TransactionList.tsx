@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale';
 
 interface Props {
   transactions: Transaction[];
-  onDelete: (id: number) => void;
+  onDelete: (t: Transaction) => void;
   onEdit?: (t: Transaction) => void;
 }
 
@@ -147,7 +147,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }: Prop
                         {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
                       </p>
                       <button
-                        onClick={() => t.id && onDelete(t.id)}
+                        onClick={() => onDelete(t)}
                         className="p-2 text-slate-200 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                         title={t.installments && t.installments > 1 && !t.installment_ref ? 'Deletar todas as parcelas' : 'Deletar'}
                       >
