@@ -5,7 +5,7 @@ import {
   CartesianGrid, Legend
 } from 'recharts';
 import { Transaction } from '../types';
-import { format, subMonths, parseISO } from 'date-fns';
+import { format, subMonths, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, BarChart3, LineChart as LineIcon, PieChart as PieIcon } from 'lucide-react';
@@ -17,36 +17,58 @@ interface Props {
 
 const COLORS = ['#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#ef4444', '#f97316', '#f59e0b', '#eab308'];
 
-export default function CategoryChart({ transactions, currentMonth }: Props) {
+export default function CategoryChart({ transactions = [], currentMonth }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const currentMonthDate = parseISO(`${currentMonth}-01`);
+
+  // Safety check for date
+  const currentMonthDate = useMemo(() => {
+    try {
+      const d = parseISO(`${currentMonth}-01`);
+      return isValid(d) ? d : new Date();
+    } catch {
+      return new Date();
+    }
+  }, [currentMonth]);
 
   const monthExpenseData = useMemo(() => {
-    const expenses = transactions
-      .filter(t => t.type === 'expense' && t.date.startsWith(currentMonth))
-      .reduce((acc, t) => {
-        acc[t.category] = (acc[t.category] || 0) + t.amount;
-        return acc;
-      }, {} as Record<string, number>);
+    try {
+      const expenses = (transactions || [])
+        .filter(t => t?.type === 'expense' && t?.date?.startsWith(currentMonth))
+        .reduce((acc, t) => {
+          acc[t.category] = (acc[t.category] || 0) + t.amount;
+          return acc;
+        }, {} as Record<string, number>);
 
-    return Object.entries(expenses)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
+      return Object.entries(expenses)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+    } catch {
+      return [];
+    }
   }, [transactions, currentMonth]);
 
   const evolutionData = useMemo(() => {
-    const months = Array.from({ length: 6 }).map((_, i) => {
-      const d = subMonths(currentMonthDate, 5 - i);
-      return format(d, 'yyyy-MM');
-    });
+    try {
+      const months = Array.from({ length: 6 }).map((_, i) => {
+        const d = subMonths(currentMonthDate, 5 - i);
+        return format(d, 'yyyy-MM');
+      });
 
-    return months.map(m => {
-      const monthTxs = transactions.filter(t => t.date.startsWith(m));
-      const income = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-      const expense = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-      const label = format(parseISO(`${m}-01`), 'MMM', { locale: ptBR });
-      return { month: m, label, income, expense, balance: income - expense };
-    });
+      return months.map(m => {
+        const monthTxs = (transactions || []).filter(t => t?.date?.startsWith(m));
+        const income = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+        const expense = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+        
+        let label = '...';
+        try {
+          label = format(parseISO(`${m}-01`), 'MMM', { locale: ptBR });
+        } catch {}
+        
+        return { month: m, label, income, expense, balance: income - expense };
+      });
+    } catch {
+      return [];
+    }
   }, [transactions, currentMonthDate]);
 
   const charts = [
@@ -133,8 +155,11 @@ export default function CategoryChart({ transactions, currentMonth }: Props) {
   const nextChart = () => setActiveIndex((prev) => (prev + 1) % charts.length);
   const prevChart = () => setActiveIndex((prev) => (prev - 1 + charts.length) % charts.length);
 
+  // If no data, still render the container to avoid white screen
+  if (!charts[activeIndex]) return null;
+
   return (
-    <div className="mx-5 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden relative group">
+    <div className="mx-5 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden relative group min-h-[300px]">
       <div className="p-6 pb-2 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-0.5">

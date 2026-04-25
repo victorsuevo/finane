@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Wallet, Save, Check, ChevronLeft, ChevronRight, LogOut, Crown } from 'lucide-react';
 import { Transaction, Summary, Goal } from './types';
 import { formatCurrency, cn } from './lib/utils';
-import { format, subMonths, addMonths, parseISO } from 'date-fns';
+import { format, subMonths, addMonths, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import TransactionForm from './components/TransactionForm';
 import TransactionList from './components/TransactionList';
@@ -38,14 +38,30 @@ export default function App() {
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
 
   const handlePrevMonth = () => {
-    setSelectedMonth(prev => format(subMonths(parseISO(`${prev}-01`), 1), 'yyyy-MM'));
+    try {
+      setSelectedMonth(prev => format(subMonths(parseISO(`${prev}-01`), 1), 'yyyy-MM'));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleNextMonth = () => {
-    setSelectedMonth(prev => format(addMonths(parseISO(`${prev}-01`), 1), 'yyyy-MM'));
+    try {
+      setSelectedMonth(prev => format(addMonths(parseISO(`${prev}-01`), 1), 'yyyy-MM'));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const monthLabel = format(parseISO(`${selectedMonth}-01`), "MMMM 'de' yyyy", { locale: ptBR });
+  const getMonthLabel = () => {
+    try {
+      const d = parseISO(`${selectedMonth}-01`);
+      if (!isValid(d)) return "Mês Inválido";
+      return format(d, "MMMM 'de' yyyy", { locale: ptBR });
+    } catch {
+      return selectedMonth;
+    }
+  };
 
   const fetchData = useCallback(async () => {
     if (!token) return;
@@ -73,15 +89,10 @@ export default function App() {
   }, [token, logout]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleSave = async () => {
-    setSaveStatus('saving');
-    await fetchData();
-    setSaveStatus('saved');
-    setTimeout(() => setSaveStatus('idle'), 2000);
-  };
+    if (token) {
+      fetchData();
+    }
+  }, [fetchData, token]);
 
   const handleAfterAdd = async () => {
     setSaveStatus('saving');
@@ -104,10 +115,11 @@ export default function App() {
     }
   };
 
-  const globalBalance = ((summary?.totalIncome || 0) - (summary?.totalExpense || 0));
-  const monthTransactions = (transactions || []).filter(t => t?.date?.startsWith(selectedMonth));
-  const monthIncome = monthTransactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const monthExpense = monthTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  // Safe calculations
+  const safeTransactions = transactions || [];
+  const monthTransactions = safeTransactions.filter(t => t?.date?.startsWith(selectedMonth));
+  const monthIncome = monthTransactions.filter(t => t.type === 'income').reduce((s, t) => s + (t.amount || 0), 0);
+  const monthExpense = monthTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount || 0), 0);
   const monthBalance = monthIncome - monthExpense;
 
   if (authLoading) return null;
@@ -126,7 +138,7 @@ export default function App() {
           </button>
         </div>
         <div className="flex items-center gap-3">
-          <motion.button whileTap={{ scale: 0.95 }} onClick={handleSave} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors text-slate-600">
+          <motion.button whileTap={{ scale: 0.95 }} onClick={handleAfterAdd} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors text-slate-600">
             <AnimatePresence mode="wait">
               {saveStatus === 'saved' ? (
                 <motion.span key="saved" initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
@@ -167,7 +179,7 @@ export default function App() {
           <button onClick={handlePrevMonth} className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
             <ChevronLeft size={18} className="text-slate-600" />
           </button>
-          <div className="font-bold text-sm text-slate-800 capitalize tracking-wide">{monthLabel}</div>
+          <div className="font-bold text-sm text-slate-800 capitalize tracking-wide">{getMonthLabel()}</div>
           <button onClick={handleNextMonth} className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
             <ChevronRight size={18} className="text-slate-600" />
           </button>
