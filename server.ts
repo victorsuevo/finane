@@ -23,14 +23,14 @@ console.log("- DATABASE_URL:", DATABASE_URL ? "Definida (oculta)" : "NÃO DEFINI
 console.log("- GEMINI_API_KEY:", process.env.GEMINI_API_KEY ? "Definida" : "NÃO DEFINIDA");
 
 if (DATABASE_URL) {
-  console.log("🌐 Tentando conectar ao PostgreSQL (Supabase)...");
+  console.log("🌐 DATABASE_URL detectada. Tentando conectar ao PostgreSQL...");
   db_pg = new Pool({
     connectionString: DATABASE_URL,
     ssl: { rejectUnauthorized: false },
     connectionTimeoutMillis: 10000,
   });
 } else {
-  console.log("📁 Usando Banco de Dados: SQLite Local");
+  console.log("⚠️ ATENÇÃO: DATABASE_URL NÃO encontrada. Usando SQLite local (DADOS SERÃO PERDIDOS NO RESTART).");
   db_sqlite = new Database("finance.db");
 }
 
@@ -153,6 +153,7 @@ async function startServer() {
         return res.status(403).json({ error: message });
       }
       req.user = user;
+      console.log(`[AUTH] Request by: ${user.email} (ID: ${user.id})`);
       next();
     });
   };
