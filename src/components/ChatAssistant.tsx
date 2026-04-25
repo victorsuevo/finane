@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageCircle, X, Send, Bot, User, Loader2 } from 'lucide-react';
-import { Transaction } from '../types';
+import { Transaction, Goal } from '../types';
 import { chatWithAssistant } from '../services/geminiService';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,9 +13,10 @@ interface Message {
 
 interface Props {
   transactions: Transaction[];
+  goals?: Goal[];
 }
 
-export default function ChatAssistant({ transactions }: Props) {
+export default function ChatAssistant({ transactions, goals = [] }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', text: 'Oi! Eu sou o assistente do Finane. Como posso te ajudar com suas finanças hoje?' }
@@ -40,7 +41,7 @@ export default function ChatAssistant({ transactions }: Props) {
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setLoading(true);
 
-    const response = await chatWithAssistant(userMsg, transactions);
+    const response = await chatWithAssistant(userMsg, transactions, goals);
     
     if (typeof response === 'object' && 'error' in response) {
       const isExpired = response.error?.toLowerCase().includes("expira") || 

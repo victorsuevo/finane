@@ -1,20 +1,18 @@
-import { Transaction } from "../types";
+import { Transaction, Goal } from "../types";
 
-export async function getFinancialInsights(transactions: Transaction[]) {
+export async function getFinancialInsights(transactions: Transaction[], goals: Goal[] = []) {
   try {
     let token = localStorage.getItem("finane_token");
     if (!token) return "Você precisa estar logado para ver insights.";
     
-    // Clean token (remove quotes if present)
     token = token.replace(/^"(.*)"$/, '$1');
-    
     const res = await fetch("/api/ai/insights", {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ transactions })
+      body: JSON.stringify({ transactions, goals })
     });
     const data = await res.json();
     return data.text || "Não foi possível gerar insights agora.";
@@ -23,12 +21,11 @@ export async function getFinancialInsights(transactions: Transaction[]) {
   }
 }
 
-export async function chatWithAssistant(message: string, transactions: Transaction[]) {
+export async function chatWithAssistant(message: string, transactions: Transaction[], goals: Goal[] = []) {
   try {
     let token = localStorage.getItem("finane_token");
     if (!token) return { error: "Sessão expirada", details: "Token não encontrado no navegador." };
     
-    // Clean token (remove quotes if present)
     token = token.replace(/^"(.*)"$/, '$1');
     const res = await fetch("/api/ai/chat", {
       method: 'POST',
@@ -36,7 +33,7 @@ export async function chatWithAssistant(message: string, transactions: Transacti
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ message, transactions: transactions.slice(0, 30) })
+      body: JSON.stringify({ message, transactions: transactions.slice(0, 30), goals })
     });
     const data = await res.json();
     if (!res.ok) return data;

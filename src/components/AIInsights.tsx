@@ -1,20 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
-import { Transaction } from '../types';
+import { Transaction, Goal } from '../types';
 import { getFinancialInsights } from '../services/geminiService';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Props {
   transactions: Transaction[];
+  goals?: Goal[];
 }
 
-export default function AIInsights({ transactions }: Props) {
+export default function AIInsights({ transactions, goals = [] }: Props) {
   const [insight, setInsight] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const generate = async () => {
     setLoading(true);
-    const text = await getFinancialInsights(transactions);
+    const text = await getFinancialInsights(transactions, goals);
     setInsight(text || null);
     setLoading(false);
   };

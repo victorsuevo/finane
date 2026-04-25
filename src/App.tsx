@@ -242,7 +242,7 @@ export default function App() {
           userName={user.name}
         />
 
-        <AIInsights transactions={monthTransactions} />
+        <AIInsights transactions={monthTransactions} goals={goals} />
 
         {/* Transactions List */}
         <div className="space-y-4 pb-24">
@@ -270,7 +270,7 @@ export default function App() {
         <Plus size={28} />
       </motion.button>
 
-      <ChatAssistant transactions={transactions} />
+      <ChatAssistant transactions={transactions} goals={goals} />
 
       {/* Forms Overlay */}
       {showForm && (

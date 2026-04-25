@@ -577,11 +577,13 @@ async function startServer() {
   }
 
   app.post("/api/ai/chat", authenticateToken, async (req: any, res) => {
-    const { message, transactions } = req.body;
+    const { message, transactions, goals = [] } = req.body;
     try {
+      const goalsContext = goals.length > 0 ? `Metas do usuário (trate transações nestas categorias como investimentos/poupança, não como gastos negativos): ${JSON.stringify(goals)}` : '';
       const prompt = `
         Você é o "SUEVO", um assistente financeiro pessoal inteligente em português.
         Contexto do Usuário (últimas transações): ${JSON.stringify(transactions.slice(0, 30))}
+        ${goalsContext}
         Pergunta do usuário: ${message}
       `;
       const text = await callAI(prompt);
@@ -592,11 +594,16 @@ async function startServer() {
   });
 
   app.post("/api/ai/insights", authenticateToken, async (req: any, res) => {
-    const { transactions } = req.body;
+    const { transactions, goals = [] } = req.body;
     try {
+      const goalsContext = goals.length > 0 ? `Metas do usuário: ${JSON.stringify(goals)}. IMPORTANTE: Se uma transação for para uma destas metas, ela é um INVESTIMENTO (positivo para o futuro), e não um gasto ruim.` : '';
       const prompt = `
-        Aja como um consultor financeiro pessoal em português. Analise estas transações e dê 3 dicas curtas e práticas:
-        ${JSON.stringify(transactions.slice(0, 50))}
+        Aja como um consultor financeiro pessoal em português. Analise estas transações e dê 3 dicas curtas e práticas.
+        Contexto:
+        - Transações: ${JSON.stringify(transactions.slice(0, 50))}
+        - ${goalsContext}
+        
+        Regra: Não dê bronca por gastos em Metas/Investimentos. Elogie o usuário por poupar dinheiro nessas categorias.
       `;
       const text = await callAI(prompt);
       res.json({ text });
