@@ -528,14 +528,19 @@ async function startServer() {
         Contexto do Usuário (últimas transações): ${JSON.stringify(transactions.slice(0, 30))}
         Pergunta do usuário: ${message}
       `;
-      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message || "Erro na API do Google");
+      if (!response.ok) {
+        if (response.status === 429 || (data.error && data.error.message.includes('Quota exceeded'))) {
+          throw new Error("Limite de consultas gratuitas à IA excedido. Por favor, aguarde cerca de um minuto e tente novamente.");
+        }
+        throw new Error(data.error?.message || "Erro na API do Google");
+      }
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui processar isso.";
       res.json({ text });
     } catch (error: any) {
@@ -550,13 +555,19 @@ async function startServer() {
         Aja como um consultor financeiro pessoal em português. Analise estas transações e dê 3 dicas curtas e práticas:
         ${JSON.stringify(transactions.slice(0, 50))}
       `;
-      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
       });
       const data = await response.json();
+      if (!response.ok) {
+        if (response.status === 429 || (data.error && data.error.message.includes('Quota exceeded'))) {
+           return res.json({ text: "Muitas requisições simultâneas. Aguarde um minutinho para ver novos insights financeiros." });
+        }
+        throw new Error(data.error?.message || "Erro na API");
+      }
       res.json({ text: data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem insights no momento." });
     } catch (error) {
       res.status(500).json({ error: "Erro nos insights" });
