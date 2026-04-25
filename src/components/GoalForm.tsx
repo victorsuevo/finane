@@ -113,7 +113,7 @@ export default function GoalForm({ onSuccess, onClose, editGoal }: Props) {
                 type="date"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
-                className="w-full bg-transparent border-none text-sm font-bold text-slate-900 dark:text-white focus:ring-0 p-0"
+                className="w-full bg-transparent border-none text-sm font-bold text-slate-900 dark:text-white focus:ring-0 p-0 [color-scheme:light_dark]"
               />
             </div>
           </div>

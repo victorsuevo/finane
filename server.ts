@@ -727,7 +727,7 @@ async function startServer() {
             'Authorization': `Bearer ${GROQ_API_KEY}`
           },
           body: JSON.stringify({
-            model: "llama-3.3-70b-versatile", // Fast and reliable model
+            model: "llama3-8b-8192", // Smaller model with higher rate limits
             messages: [{ role: "user", content: prompt }]
           })
         });
@@ -737,6 +737,9 @@ async function startServer() {
         }
         throw new Error(data.error?.message || "Erro na API do Groq");
       } catch (err: any) {
+        if (err.message.includes('Rate limit') || err.message.includes('Too Many Requests')) {
+          throw new Error("O limite diário de consultas à IA foi atingido. Por favor, tente novamente mais tarde.");
+        }
         throw new Error(`Gemini e Groq falharam. Erro Groq: ${err.message}`);
       }
     }
