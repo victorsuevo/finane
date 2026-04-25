@@ -20,7 +20,7 @@ interface Props {
 export default function ChatAssistant({ transactions, goals = [] }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', text: 'Oi! Eu sou o assistente do Finane. Como posso te ajudar com suas finanças hoje?' }
+    { role: 'assistant', text: 'Oi! Eu sou o assistente SUEVO. Como posso te ajudar com suas finanças hoje?' }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -128,7 +128,7 @@ export default function ChatAssistant({ transactions, goals = [] }: Props) {
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Pergunte algo ao Finane..."
+                placeholder="Pergunte algo ao SUEVO..."
                 className="flex-1 bg-slate-100 rounded-xl px-4 py-2 text-xs font-bold border-none focus:ring-2 focus:ring-indigo-500 placeholder:text-slate-300"
               />
               <button
