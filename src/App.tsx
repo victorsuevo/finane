@@ -1,18 +1,43 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Wallet, LogOut } from 'lucide-react';
-import { useAuth } from './contexts/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Wallet, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Transaction } from './types';
+import { formatCurrency, cn } from './lib/utils';
+import { format, subMonths, addMonths, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import TransactionList from './components/TransactionList';
 import Login from './components/Login';
+import { useAuth } from './contexts/AuthContext';
 
 export default function App() {
   const { user, token, logout, isLoading: authLoading } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
 
-  if (authLoading) return (
-    <div className="min-h-screen bg-[#0f172a] flex items-center justify-center text-white font-black uppercase tracking-widest text-xs">
-      Carregando...
-    </div>
-  );
-  
+  const fetchData = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/transactions', { headers: { 'Authorization': `Bearer ${token}` } });
+      const data = await res.json();
+      setTransactions(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (token) fetchData();
+  }, [fetchData, token]);
+
+  const handlePrevMonth = () => setSelectedMonth(prev => format(subMonths(parseISO(`${prev}-01`), 1), 'yyyy-MM'));
+  const handleNextMonth = () => setSelectedMonth(prev => format(addMonths(parseISO(`${prev}-01`), 1), 'yyyy-MM'));
+
+  const monthTransactions = transactions.filter(t => t?.date?.startsWith(selectedMonth));
+  const monthIncome = monthTransactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const monthExpense = monthTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const monthBalance = monthIncome - monthExpense;
+
+  if (authLoading) return null;
   if (!user) return <Login />;
 
   return (
@@ -34,12 +59,32 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-md mx-auto pt-24 pb-12 space-y-6 flex flex-col items-center justify-center">
-        <div className="px-5 py-20 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm text-center">
-          <h2 className="text-xl font-black text-slate-900 mb-2">MODO DE SEGURANÇA</h2>
-          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">
-            O núcleo foi carregado com sucesso.
-          </p>
+      <main className="max-w-md mx-auto pt-24 pb-12 space-y-6">
+        <div className="px-5">
+          <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black mb-1">Saldo do Mês</p>
+          <h2 className={cn("text-4xl font-black tracking-tighter leading-none", monthBalance >= 0 ? "text-slate-900" : "text-rose-600")}>
+            {formatCurrency(monthBalance)}
+          </h2>
+        </div>
+
+        <div className="px-5 flex items-center justify-between">
+          <button onClick={handlePrevMonth} className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50">
+            <ChevronLeft size={18} />
+          </button>
+          <div className="font-bold text-sm text-slate-800 capitalize">
+            {format(parseISO(`${selectedMonth}-01`), "MMMM 'de' yyyy", { locale: ptBR })}
+          </div>
+          <button onClick={handleNextMonth} className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50">
+            <ChevronRight size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div className="px-5 flex justify-between items-end">
+            <h3 className="font-bold text-sm text-slate-900">Transações</h3>
+            <span className="text-[10px] text-slate-400 font-bold">{monthTransactions.length} registros</span>
+          </div>
+          <TransactionList transactions={monthTransactions} onDelete={() => {}} onEdit={() => {}} />
         </div>
       </main>
     </div>
