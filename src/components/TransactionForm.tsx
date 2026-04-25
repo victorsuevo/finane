@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'motion/react';
-import { Plus, X } from 'lucide-react';
-import { Transaction } from '../types';
+import { X, CreditCard, Target } from 'lucide-react';
+import { Goal } from '../types';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,57 +9,98 @@ interface Props {
   onSuccess: () => void;
   onClose: () => void;
   initialType?: 'income' | 'expense';
+  goals?: Goal[];
 }
 
 const INCOME_CATEGORIES = [
   'Salário', 'Investimentos', 'Presente', 'Venda', 'Freelance', 'Outros'
 ];
 
-const EXPENSE_CATEGORIES = [
-  'Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Educação', 'Moradia', 'Mercado', 'Assinaturas', 'Outros'
+const BASE_EXPENSE_CATEGORIES = [
+  'Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Educação',
+  'Moradia', 'Mercado', 'Assinaturas', 'Outros'
 ];
 
-export default function TransactionForm({ onSuccess, onClose, initialType = 'expense' }: Props) {
+// Prefix used to identify goal-categories in the select
+const GOAL_PREFIX = '__GOAL__';
+
+export default function TransactionForm({
+  onSuccess,
+  onClose,
+  initialType = 'expense',
+  goals = [],
+}: Props) {
   const [amount, setAmount] = useState('');
   const [type, setType] = useState<'income' | 'expense'>(initialType);
-  const [category, setCategory] = useState(type === 'income' ? 'Salário' : 'Outros');
+  const [category, setCategory] = useState(
+    initialType === 'income' ? 'Salário' : 'Outros'
+  );
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [installments, setInstallments] = useState(1);
   const [loading, setLoading] = useState(false);
   const { token } = useAuth();
 
-  const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  // Active (not completed) goals for the dropdown
+  const activeGoals = useMemo(
+    () => goals.filter(g => g.current_amount < g.target_amount),
+    [goals]
+  );
+
+  // Is the currently selected category a goal?
+  const selectedGoal = useMemo(() => {
+    if (!category.startsWith(GOAL_PREFIX)) return null;
+    const goalId = parseInt(category.replace(GOAL_PREFIX, ''), 10);
+    return goals.find(g => g.id === goalId) ?? null;
+  }, [category, goals]);
+
+  const handleTypeChange = (newType: 'income' | 'expense') => {
+    setType(newType);
+    setCategory(newType === 'income' ? 'Salário' : 'Outros');
+    setInstallments(1);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
+    // Resolve real category name and goal_id
+    const isGoal = !!selectedGoal;
+    const realCategory = isGoal ? selectedGoal!.name : category;
+    const goal_id = isGoal ? selectedGoal!.id : null;
+
     try {
+      const payload: any = {
+        amount: parseFloat(amount),
+        type,
+        category: realCategory,
+        description: description || realCategory,
+        date,
+        installments: installments > 1 ? installments : 1,
+        goal_id,
+      };
+
       const res = await fetch('/api/transactions', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          amount: parseFloat(amount),
-          type,
-          category,
-          description,
-          date
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
         onSuccess();
         onClose();
       }
-    } catch (error) {
-      console.error('Erro ao salvar transação:', error);
+    } catch (err) {
+      console.error('Erro ao salvar transação:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  const isGoalCategory = !!selectedGoal;
 
   return (
     <motion.div
@@ -70,97 +111,227 @@ export default function TransactionForm({ onSuccess, onClose, initialType = 'exp
       <motion.div
         initial={{ y: 100 }}
         animate={{ y: 0 }}
-        className="bg-white w-full max-w-lg p-8 rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl space-y-8"
+        className="bg-white w-full max-w-lg p-8 rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Nova Transação</h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+            Nova Transação
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+          >
             <X size={24} className="text-slate-400" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
+
+          {/* ── Type Toggle ── */}
           <div className="flex p-1.5 bg-slate-100 rounded-2xl">
-            <button
-              type="button"
-              onClick={() => setType('expense')}
-              className={cn(
-                "flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all",
-                type === 'expense' ? "bg-white shadow-sm text-rose-600" : "text-slate-500 opacity-60"
-              )}
-            >
-              Saída
-            </button>
-            <button
-              type="button"
-              onClick={() => setType('income')}
-              className={cn(
-                "flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all",
-                type === 'income' ? "bg-white shadow-sm text-emerald-600" : "text-slate-500 opacity-60"
-              )}
-            >
-              Entrada
-            </button>
+            {(['expense', 'income'] as const).map(t => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => handleTypeChange(t)}
+                className={cn(
+                  'flex-1 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all',
+                  type === t
+                    ? t === 'expense'
+                      ? 'bg-white shadow-sm text-rose-600'
+                      : 'bg-white shadow-sm text-emerald-600'
+                    : 'text-slate-500 opacity-60'
+                )}
+              >
+                {t === 'expense' ? 'Saída' : 'Entrada'}
+              </button>
+            ))}
           </div>
 
-          <div className="space-y-6">
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Valor Total</label>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black text-slate-300">R$</span>
-                <input
-                  required
-                  autoFocus
-                  type="number"
-                  step="0.01"
-                  placeholder="0,00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-full text-5xl font-black bg-transparent border-none focus:ring-0 text-slate-900 placeholder:text-slate-100 tracking-tighter"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Categoria</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full bg-transparent border-none text-sm font-bold text-slate-900 focus:ring-0 p-0"
-                >
-                  {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
-              </div>
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Data</label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full bg-transparent border-none text-sm font-bold text-slate-900 focus:ring-0 p-0"
-                />
-              </div>
-            </div>
-
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Descrição</label>
+          {/* ── Amount ── */}
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">
+              Valor
+            </label>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-black text-slate-300">R$</span>
               <input
-                type="text"
-                placeholder="Para o que é este gasto?"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                required
+                autoFocus
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="0,00"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                className="w-full text-5xl font-black bg-transparent border-none focus:ring-0 text-slate-900 placeholder:text-slate-100 tracking-tighter"
+              />
+            </div>
+          </div>
+
+          {/* ── Category & Date (side-by-side) ── */}
+          <div className="grid grid-cols-2 gap-4">
+
+            {/* Category */}
+            <div
+              className={cn(
+                'p-4 rounded-2xl border transition-all',
+                isGoalCategory
+                  ? 'bg-indigo-50 border-indigo-200'
+                  : 'bg-slate-50 border-slate-100'
+              )}
+            >
+              <label
+                className={cn(
+                  'text-[10px] font-black uppercase tracking-widest block mb-2',
+                  isGoalCategory ? 'text-indigo-400' : 'text-slate-400'
+                )}
+              >
+                {isGoalCategory ? '🎯 Meta' : 'Categoria'}
+              </label>
+              <select
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+                className={cn(
+                  'w-full bg-transparent border-none text-sm font-bold focus:ring-0 p-0',
+                  isGoalCategory ? 'text-indigo-800' : 'text-slate-900'
+                )}
+              >
+                {type === 'income' ? (
+                  INCOME_CATEGORIES.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))
+                ) : (
+                  <>
+                    {/* Regular expense categories */}
+                    <optgroup label="Despesas">
+                      {BASE_EXPENSE_CATEGORIES.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </optgroup>
+
+                    {/* Goal categories (only shown if goals exist) */}
+                    {activeGoals.length > 0 && (
+                      <optgroup label="🎯 Metas">
+                        {activeGoals.map(g => {
+                          const remaining = g.target_amount - g.current_amount;
+                          return (
+                            <option
+                              key={g.id}
+                              value={`${GOAL_PREFIX}${g.id}`}
+                            >
+                              {g.name} (faltam R$ {remaining.toFixed(2)})
+                            </option>
+                          );
+                        })}
+                      </optgroup>
+                    )}
+                  </>
+                )}
+              </select>
+            </div>
+
+            {/* Date */}
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                Data
+              </label>
+              <input
+                type="date"
+                value={date}
+                onChange={e => setDate(e.target.value)}
                 className="w-full bg-transparent border-none text-sm font-bold text-slate-900 focus:ring-0 p-0"
               />
             </div>
           </div>
 
+          {/* ── Goal info banner ── */}
+          {isGoalCategory && selectedGoal && (
+            <div className="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-200 rounded-2xl">
+              <Target size={16} className="text-indigo-500 shrink-0" />
+              <div className="text-xs">
+                <p className="font-black text-indigo-800">{selectedGoal.name}</p>
+                <p className="text-indigo-500">
+                  Guardado: R$ {selectedGoal.current_amount.toFixed(2)} /
+                  Meta: R$ {selectedGoal.target_amount.toFixed(2)} —
+                  faltam{' '}
+                  <strong>
+                    R$ {(selectedGoal.target_amount - selectedGoal.current_amount).toFixed(2)}
+                  </strong>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ── Installments (expense only, not goal) ── */}
+          {type === 'expense' && !isGoalCategory && (
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-3">
+                <CreditCard size={11} /> Parcelas
+              </label>
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setInstallments(n => Math.max(1, n - 1))}
+                  className="w-8 h-8 bg-slate-200 hover:bg-slate-300 rounded-lg font-black text-slate-700 flex items-center justify-center transition-colors"
+                >
+                  −
+                </button>
+                <span className="font-black text-lg text-slate-900 min-w-[4rem] text-center">
+                  {installments === 1 ? 'À vista' : `${installments}×`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setInstallments(n => Math.min(48, n + 1))}
+                  className="w-8 h-8 bg-slate-200 hover:bg-slate-300 rounded-lg font-black text-slate-700 flex items-center justify-center transition-colors"
+                >
+                  +
+                </button>
+                {installments > 1 && amount && (
+                  <span className="text-[10px] text-slate-400 font-bold">
+                    = R$ {parseFloat(amount).toFixed(2)}/mês por {installments} meses
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Description ── */}
+          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+              Descrição
+            </label>
+            <input
+              type="text"
+              placeholder={
+                isGoalCategory
+                  ? 'Observação (ex: depósito mensal)'
+                  : 'Para o que é este gasto?'
+              }
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              className="w-full bg-transparent border-none text-sm font-bold text-slate-900 focus:ring-0 p-0"
+            />
+          </div>
+
+          {/* ── Submit ── */}
           <button
-            disabled={loading}
             type="submit"
-            className="w-full py-5 bg-slate-900 hover:bg-black text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl transition-all disabled:opacity-50"
+            disabled={loading}
+            className={cn(
+              'w-full py-5 text-white rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl transition-all disabled:opacity-50',
+              isGoalCategory
+                ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20'
+                : 'bg-slate-900 hover:bg-black'
+            )}
           >
-            {loading ? 'Processando...' : 'Confirmar Transação'}
+            {loading
+              ? 'Processando...'
+              : installments > 1
+              ? `Parcelar em ${installments}×`
+              : isGoalCategory
+              ? `Aportar para "${selectedGoal?.name}"`
+              : 'Confirmar Transação'}
           </button>
         </form>
       </motion.div>

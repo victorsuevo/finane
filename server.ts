@@ -7,7 +7,6 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import pkg from 'pg';
-import { GoogleGenerativeAI } from "@google/generative-ai";
 const { Pool } = pkg;
 
 dotenv.config({ path: ".env.local" });
@@ -21,7 +20,6 @@ let db_pg: any;
 
 console.log("🔍 Verificando variáveis de ambiente...");
 console.log("- DATABASE_URL:", DATABASE_URL ? "Definida (oculta)" : "NÃO DEFINIDA");
-console.log("- database_url:", process.env.database_url ? "Definida (oculta)" : "NÃO DEFINIDA");
 console.log("- GEMINI_API_KEY:", process.env.GEMINI_API_KEY ? "Definida" : "NÃO DEFINIDA");
 
 if (DATABASE_URL) {
@@ -32,7 +30,7 @@ if (DATABASE_URL) {
     connectionTimeoutMillis: 10000,
   });
 } else {
-  console.log("📁 Usando Banco de Dados: SQLite Local (Aviso: Dados serão perdidos no Render)");
+  console.log("📁 Usando Banco de Dados: SQLite Local");
   db_sqlite = new Database("finance.db");
 }
 
@@ -41,17 +39,14 @@ async function query(sql: string, params: any[] = []) {
     let pgSql = sql;
     let paramCount = 1;
     pgSql = pgSql.replace(/\?/g, () => `$${paramCount++}`);
-    
-    // Add RETURNING id to inserts for PG
     if (pgSql.trim().toLowerCase().startsWith("insert")) {
       pgSql += " RETURNING id";
     }
-
     const res = await db_pg.query(pgSql, params);
-    return { 
-      rows: res.rows, 
+    return {
+      rows: res.rows,
       lastInsertRowid: res.rows[0]?.id,
-      changes: res.rowCount 
+      changes: res.rowCount
     };
   }
   const stmt = db_sqlite.prepare(sql);
@@ -70,7 +65,8 @@ async function setupTables() {
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL
+      password TEXT NOT NULL,
+      is_manager INTEGER DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS transactions (
       id SERIAL PRIMARY KEY,
@@ -79,7 +75,11 @@ async function setupTables() {
       category TEXT NOT NULL,
       description TEXT,
       date TEXT NOT NULL,
-      type TEXT NOT NULL
+      type TEXT NOT NULL,
+      installments INTEGER DEFAULT 1,
+      installment_ref INTEGER DEFAULT NULL,
+      installment_num INTEGER DEFAULT 1,
+      goal_id INTEGER DEFAULT NULL
     );
     CREATE TABLE IF NOT EXISTS goals (
       id SERIAL PRIMARY KEY,
@@ -92,18 +92,49 @@ async function setupTables() {
   `;
   try {
     if (db_pg) {
-      await db_pg.query(schema);
+      // Run each statement separately for PG
+      const statements = schema.split(';').map(s => s.trim()).filter(s => s.length > 0);
+      for (const stmt of statements) {
+        await db_pg.query(stmt);
+      }
+      // Add columns if missing (ALTER TABLE IF NOT EXISTS COLUMN not in all PG versions)
+      const alterStatements = [
+        `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_manager INTEGER DEFAULT 0`,
+        `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS installments INTEGER DEFAULT 1`,
+        `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS installment_ref INTEGER DEFAULT NULL`,
+        `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS installment_num INTEGER DEFAULT 1`,
+        `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS goal_id INTEGER DEFAULT NULL`,
+      ];
+      for (const stmt of alterStatements) {
+        try { await db_pg.query(stmt); } catch (_) {}
+      }
       console.log("✅ Tabelas PostgreSQL verificadas/criadas com sucesso.");
     } else {
-      db_sqlite.exec(schema.replace(/SERIAL/g, "INTEGER").replace(/PRIMARY KEY/g, "PRIMARY KEY AUTOINCREMENT"));
+      const sqliteSafe = schema
+        .replace(/SERIAL/g, "INTEGER")
+        .replace(/PRIMARY KEY,/g, "PRIMARY KEY AUTOINCREMENT,");
+      // Split and execute each statement
+      const statements = sqliteSafe.split(';').map(s => s.trim()).filter(s => s.length > 0);
+      for (const stmt of statements) {
+        try { db_sqlite.exec(stmt + ';'); } catch(_) {}
+      }
+      // Add missing columns for SQLite
+      const alterCols = [
+        `ALTER TABLE users ADD COLUMN is_manager INTEGER DEFAULT 0`,
+        `ALTER TABLE transactions ADD COLUMN installments INTEGER DEFAULT 1`,
+        `ALTER TABLE transactions ADD COLUMN installment_ref INTEGER DEFAULT NULL`,
+        `ALTER TABLE transactions ADD COLUMN installment_num INTEGER DEFAULT 1`,
+        `ALTER TABLE transactions ADD COLUMN goal_id INTEGER DEFAULT NULL`,
+      ];
+      for (const stmt of alterCols) {
+        try { db_sqlite.exec(stmt); } catch (_) {}
+      }
       console.log("✅ Tabelas SQLite verificadas/criadas com sucesso.");
     }
   } catch (error) {
     console.error("❌ ERRO AO CRIAR TABELAS:", error);
   }
 }
-
-// Initial Table Setup called inside startServer
 
 async function startServer() {
   const app = express();
@@ -115,18 +146,22 @@ async function startServer() {
   const authenticateToken = (req: any, res: any, next: any) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-
     if (!token) return res.status(401).json({ error: "Não autorizado" });
-
     jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
       if (err) {
-        console.error("🔐 Erro na verificação do token:", err.name, err.message);
         const message = err.name === 'TokenExpiredError' ? "Sessão expirada" : "Token inválido ou expirado";
-        return res.status(403).json({ error: message, details: err.message });
+        return res.status(403).json({ error: message });
       }
       req.user = user;
       next();
     });
+  };
+
+  const requireManager = (req: any, res: any, next: any) => {
+    if (!req.user?.is_manager) {
+      return res.status(403).json({ error: "Acesso restrito ao gestor." });
+    }
+    next();
   };
 
   // --- Auth Routes ---
@@ -134,10 +169,13 @@ async function startServer() {
     const { name, email, password } = req.body;
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
-      const info = await query("INSERT INTO users (name, email, password) VALUES (?, ?, ?)", [name, email, hashedPassword]);
+      const info = await query(
+        "INSERT INTO users (name, email, password, is_manager) VALUES (?, ?, ?, 0)",
+        [name, email, hashedPassword]
+      );
       const userId = info.lastInsertRowid;
-      const token = jwt.sign({ id: userId, email, name }, JWT_SECRET, { expiresIn: '7d' });
-      res.json({ token, user: { id: userId, name, email } });
+      const token = jwt.sign({ id: userId, email, name, is_manager: false }, JWT_SECRET, { expiresIn: '7d' });
+      res.json({ token, user: { id: userId, name, email, is_manager: false } });
     } catch (error: any) {
       if (error.message.includes("UNIQUE") || error.code === '23505') {
         res.status(400).json({ error: "E-mail já cadastrado" });
@@ -152,15 +190,16 @@ async function startServer() {
     try {
       const { rows } = await query("SELECT * FROM users WHERE email = ?", [email]);
       const user = rows[0];
-      if (!user) {
-        return res.status(401).json({ error: "Usuário não encontrado" });
-      }
+      if (!user) return res.status(401).json({ error: "Usuário não encontrado" });
       const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
-        return res.status(401).json({ error: "Senha incorreta" });
-      }
-      const token = jwt.sign({ id: user.id, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
-      res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+      if (!isPasswordValid) return res.status(401).json({ error: "Senha incorreta" });
+      const isManager = !!(user.is_manager);
+      const token = jwt.sign(
+        { id: user.id, email: user.email, name: user.name, is_manager: isManager },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+      res.json({ token, user: { id: user.id, name: user.name, email: user.email, is_manager: isManager } });
     } catch (error: any) {
       console.error("Login error:", error);
       res.status(500).json({ error: "Erro ao fazer login", details: error.message });
@@ -168,11 +207,7 @@ async function startServer() {
   });
 
   app.get("/api/health", async (req, res) => {
-    const status: any = {
-      db_type: db_pg ? "PostgreSQL" : "SQLite",
-      env: process.env.NODE_ENV,
-      time: new Date().toISOString(),
-    };
+    const status: any = { db_type: db_pg ? "PostgreSQL" : "SQLite", time: new Date().toISOString() };
     try {
       await query("SELECT 1");
       status.db_connection = "OK";
@@ -183,10 +218,13 @@ async function startServer() {
     res.json(status);
   });
 
-  // --- API Routes ---
+  // --- Transactions Routes ---
   app.get("/api/transactions", authenticateToken, async (req: any, res) => {
     try {
-      const { rows } = await query("SELECT * FROM transactions WHERE user_id = ? ORDER BY date DESC", [req.user.id]);
+      const { rows } = await query(
+        "SELECT * FROM transactions WHERE user_id = ? ORDER BY date DESC",
+        [req.user.id]
+      );
       res.json(rows);
     } catch (error) {
       res.status(500).json({ error: "Erro ao buscar transações" });
@@ -208,22 +246,142 @@ async function startServer() {
     }
   });
 
-  app.post("/api/transactions", authenticateToken, async (req: any, res) => {
-    const { amount, category, description, date, type } = req.body;
+  // Month summary
+  app.get("/api/summary/month", authenticateToken, async (req: any, res) => {
+    const { month } = req.query; // format: "2025-04"
+    if (!month) return res.status(400).json({ error: "Parâmetro 'month' obrigatório" });
     try {
-      const info = await query(
-        "INSERT INTO transactions (user_id, amount, category, description, date, type) VALUES (?, ?, ?, ?, ?, ?)",
-        [req.user.id, amount, category, description, date, type]
-      );
-      res.json({ id: info.lastInsertRowid });
+      const { rows } = await query(`
+        SELECT 
+          SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as "totalIncome",
+          SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as "totalExpense"
+        FROM transactions
+        WHERE user_id = ? AND date LIKE ?
+      `, [req.user.id, `${month}%`]);
+      res.json(rows[0] || { totalIncome: 0, totalExpense: 0 });
     } catch (error) {
+      res.status(500).json({ error: "Erro interno" });
+    }
+  });
+
+  app.post("/api/transactions", authenticateToken, async (req: any, res) => {
+    const { amount, category, description, date, type, installments, goal_id } = req.body;
+    const totalInstallments = parseInt(installments) || 1;
+
+    try {
+      // ── Resolve goal: prefer explicit goal_id, fallback to category-name match ──
+      let resolvedGoalId: number | null = goal_id || null;
+
+      if (!resolvedGoalId && type === 'expense' && category) {
+        // Check if the category name matches any goal owned by this user
+        const { rows: matchedGoals } = await query(
+          "SELECT id FROM goals WHERE user_id = ? AND name = ?",
+          [req.user.id, category]
+        );
+        if (matchedGoals.length > 0) {
+          resolvedGoalId = matchedGoals[0].id;
+        }
+      }
+
+      // Insert first (or only) transaction
+      const info = await query(
+        "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_num, goal_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [req.user.id, amount, category, description, date, type, totalInstallments, 1, resolvedGoalId]
+      );
+      const parentId = info.lastInsertRowid;
+
+      // If parceled, insert remaining installments
+      if (totalInstallments > 1) {
+        const baseDate = new Date(date + 'T12:00:00');
+        for (let i = 2; i <= totalInstallments; i++) {
+          const nextDate = new Date(baseDate);
+          nextDate.setMonth(nextDate.getMonth() + (i - 1));
+          const nextDateStr = nextDate.toISOString().split('T')[0];
+          const installDesc = `${description} (${i}/${totalInstallments})`;
+          await query(
+            "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_ref, installment_num, goal_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [req.user.id, amount, category, installDesc, nextDateStr, type, totalInstallments, parentId, i, resolvedGoalId]
+          );
+        }
+        // Update first transaction description
+        const firstDesc = `${description} (1/${totalInstallments})`;
+        await query(
+          "UPDATE transactions SET description = ? WHERE id = ?",
+          [firstDesc, parentId]
+        );
+      }
+
+      // ── Debit goal current_amount (only for the 1st installment; each child counts on its own month) ──
+      if (resolvedGoalId && type === 'expense') {
+        // For installments, only debit the 1st parcel now; the rest will be debited when each future month's entry is posted
+        // (Since all installment children are inserted now, we debit all of them)
+        const totalToDebit = totalInstallments > 1 ? amount * totalInstallments : amount;
+        await query(
+          "UPDATE goals SET current_amount = current_amount + ? WHERE id = ? AND user_id = ?",
+          [totalToDebit, resolvedGoalId, req.user.id]
+        );
+      }
+
+      res.json({ id: parentId, installments: totalInstallments, goal_id: resolvedGoalId });
+    } catch (error: any) {
+      console.error("Erro ao salvar transação:", error);
       res.status(500).json({ error: "Erro ao salvar transação" });
     }
   });
 
   app.delete("/api/transactions/:id", authenticateToken, async (req: any, res) => {
     try {
+      const { rows } = await query(
+        "SELECT * FROM transactions WHERE id = ? AND user_id = ?",
+        [req.params.id, req.user.id]
+      );
+      const t = rows[0];
+      if (!t) return res.status(404).json({ error: "Transação não encontrada" });
+
+      // ── Resolve goal_id if not stored (legacy rows): match by category name ──
+      let effectiveGoalId = t.goal_id || null;
+      if (!effectiveGoalId && t.type === 'expense' && t.category) {
+        const { rows: mg } = await query(
+          "SELECT id FROM goals WHERE user_id = ? AND name = ?",
+          [req.user.id, t.category]
+        );
+        if (mg.length > 0) effectiveGoalId = mg[0].id;
+      }
+
+      // ── Reverse goal contribution for this transaction ──
+      if (effectiveGoalId && t.type === 'expense') {
+        await query(
+          "UPDATE goals SET current_amount = MAX(0, current_amount - ?) WHERE id = ? AND user_id = ?",
+          [t.amount, effectiveGoalId, req.user.id]
+        );
+      }
+
+      // Delete this transaction
       await query("DELETE FROM transactions WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
+
+      // ── If parent with installments, delete all children and reverse their goal debits ──
+      if (!t.installment_ref && t.installments > 1) {
+        const { rows: children } = await query(
+          "SELECT * FROM transactions WHERE installment_ref = ? AND user_id = ?",
+          [req.params.id, req.user.id]
+        );
+
+        if (effectiveGoalId && t.type === 'expense' && children.length > 0) {
+          const totalChildAmount = children.reduce((acc: number, c: any) => acc + c.amount, 0);
+          if (totalChildAmount > 0) {
+            await query(
+              "UPDATE goals SET current_amount = MAX(0, current_amount - ?) WHERE id = ? AND user_id = ?",
+              [totalChildAmount, effectiveGoalId, req.user.id]
+            );
+          }
+        }
+
+        await query(
+          "DELETE FROM transactions WHERE installment_ref = ? AND user_id = ?",
+          [req.params.id, req.user.id]
+        );
+      }
+
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Erro ao deletar" });
@@ -253,15 +411,92 @@ async function startServer() {
     }
   });
 
-  // Serve static files from 'dist' (Production) and 'public' (All)
+  app.delete("/api/goals/:id", authenticateToken, async (req: any, res) => {
+    try {
+      await query("DELETE FROM goals WHERE id = ? AND user_id = ?", [req.params.id, req.user.id]);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao deletar meta" });
+    }
+  });
+
+  // --- Manager Routes ---
+  app.get("/api/manager/users", authenticateToken, requireManager, async (req: any, res) => {
+    try {
+      const { rows } = await query("SELECT id, name, email, is_manager FROM users ORDER BY id");
+      res.json(rows);
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao buscar usuários" });
+    }
+  });
+
+  app.get("/api/manager/stats", authenticateToken, requireManager, async (req: any, res) => {
+    try {
+      const { rows: userCount } = await query("SELECT COUNT(*) as count FROM users");
+      const { rows: txCount } = await query("SELECT COUNT(*) as count FROM transactions");
+      const { rows: goalCount } = await query("SELECT COUNT(*) as count FROM goals");
+      const { rows: totalVol } = await query("SELECT SUM(amount) as total FROM transactions");
+      res.json({
+        users: parseInt(userCount[0]?.count || 0),
+        transactions: parseInt(txCount[0]?.count || 0),
+        goals: parseInt(goalCount[0]?.count || 0),
+        totalVolume: parseFloat(totalVol[0]?.total || 0),
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao buscar estatísticas" });
+    }
+  });
+
+  app.patch("/api/manager/users/:id/promote", authenticateToken, requireManager, async (req: any, res) => {
+    const { is_manager } = req.body;
+    try {
+      await query("UPDATE users SET is_manager = ? WHERE id = ?", [is_manager ? 1 : 0, req.params.id]);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao atualizar usuário" });
+    }
+  });
+
+  app.delete("/api/manager/users/:id", authenticateToken, requireManager, async (req: any, res) => {
+    if (parseInt(req.params.id) === req.user.id) {
+      return res.status(400).json({ error: "Não pode deletar a si mesmo." });
+    }
+    try {
+      await query("DELETE FROM transactions WHERE user_id = ?", [req.params.id]);
+      await query("DELETE FROM goals WHERE user_id = ?", [req.params.id]);
+      await query("DELETE FROM users WHERE id = ?", [req.params.id]);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao deletar usuário" });
+    }
+  });
+
+  // Promote first user as manager (setup endpoint, one-time use)
+  app.post("/api/manager/setup", async (req, res) => {
+    const { secret } = req.body;
+    const SETUP_SECRET = process.env.MANAGER_SETUP_SECRET || "suevo-manager-2025";
+    if (secret !== SETUP_SECRET) {
+      return res.status(403).json({ error: "Segredo inválido." });
+    }
+    try {
+      const { rows } = await query("SELECT id FROM users ORDER BY id LIMIT 1");
+      if (!rows[0]) return res.status(404).json({ error: "Nenhum usuário cadastrado." });
+      await query("UPDATE users SET is_manager = 1 WHERE id = ?", [rows[0].id]);
+      res.json({ success: true, promoted_user_id: rows[0].id });
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao promover gestor." });
+    }
+  });
+
+  // Serve static files
   const distPath = path.join(process.cwd(), "dist");
   const publicPath = path.join(process.cwd(), "public");
 
   app.use(express.static(publicPath));
-  
   if (fs.existsSync(distPath)) {
     app.use(express.static(distPath));
   }
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -269,7 +504,6 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    // Production fallback: index.html
     app.get("*", (req, res) => {
       const indexFile = path.join(distPath, "index.html");
       if (fs.existsSync(indexFile)) {
@@ -282,56 +516,30 @@ async function startServer() {
 
   // --- AI Routes ---
   const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || "").trim();
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-
-  app.get("/api/ai/models", authenticateToken, async (req, res) => {
-    try {
-      // Note: The SDK doesn't have a direct listModels, but we can try a dummy call
-      res.json({ message: "Endpoint para debug", key_length: GEMINI_API_KEY.length });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
 
   app.post("/api/ai/chat", authenticateToken, async (req: any, res) => {
     const { message, transactions } = req.body;
-    
     if (!GEMINI_API_KEY) {
       return res.status(500).json({ error: "Configuração ausente: GEMINI_API_KEY não encontrada no servidor." });
     }
-
     try {
       const prompt = `
-        Você é o "SUEVO", um assistente financeiro.
-        Contexto do Usuário: ${JSON.stringify(transactions.slice(0, 30))}
-        Pergunta: ${message}
+        Você é o "SUEVO", um assistente financeiro pessoal inteligente em português.
+        Contexto do Usuário (últimas transações): ${JSON.stringify(transactions.slice(0, 30))}
+        Pergunta do usuário: ${message}
       `;
-
-      console.log("🤖 Tentando IA via Fetch Direto (v1)...");
       const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-      
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
       });
-
       const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error?.message || "Erro na API do Google");
-      }
-
+      if (!response.ok) throw new Error(data.error?.message || "Erro na API do Google");
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui processar isso.";
       res.json({ text });
     } catch (error: any) {
-      console.error("AI Error:", error);
-      res.status(500).json({ 
-        error: "Erro na IA", 
-        details: error.message?.includes("API key") ? "Chave de API inválida" : error.message 
-      });
+      res.status(500).json({ error: "Erro na IA", details: error.message });
     }
   });
 
@@ -339,16 +547,14 @@ async function startServer() {
     const { transactions } = req.body;
     try {
       const prompt = `
-        Aja como um consultor financeiro. Analise estas transações e dê 3 dicas curtas:
+        Aja como um consultor financeiro pessoal em português. Analise estas transações e dê 3 dicas curtas e práticas:
         ${JSON.stringify(transactions.slice(0, 50))}
       `;
       const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
       });
       const data = await response.json();
       res.json({ text: data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem insights no momento." });
@@ -358,9 +564,9 @@ async function startServer() {
   });
 
   await setupTables();
-  
+
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`\n✅ FINANE ONLINE EM: http://0.0.0.0:${PORT}\n`);
+    console.log(`\n✅ SUEVO ONLINE EM: http://0.0.0.0:${PORT}\n`);
   });
 }
 
