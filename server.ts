@@ -298,11 +298,22 @@ async function startServer() {
 
       // If parceled, insert remaining installments
       if (totalInstallments > 1 && parentId) {
-        const baseDate = new Date(date + 'T12:00:00');
+        const [year, month, day] = date.split('-').map(Number);
+        
         for (let i = 2; i <= totalInstallments; i++) {
-          const nextDate = new Date(baseDate);
-          nextDate.setMonth(nextDate.getMonth() + (i - 1));
-          const nextDateStr = nextDate.toISOString().split('T')[0];
+          // Robust month addition logic
+          let nextYear = year;
+          let nextMonth = month + (i - 1) - 1; // 0-indexed month
+          
+          nextYear += Math.floor(nextMonth / 12);
+          nextMonth = nextMonth % 12;
+          
+          // Create date and adjust if day overflows the month
+          const nextDate = new Date(nextYear, nextMonth + 1, 0); // Last day of target month
+          const targetDay = Math.min(day, nextDate.getDate());
+          
+          const finalDate = new Date(nextYear, nextMonth, targetDay, 12, 0, 0);
+          const nextDateStr = finalDate.toISOString().split('T')[0];
           const installDesc = `${description} (${i}/${totalInstallments})`;
           await query(
             "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_ref, installment_num, goal_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
