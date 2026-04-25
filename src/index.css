@@ -21,40 +21,40 @@
   }
 }
 
-/* Global Dark Mode Overrides for existing light classes */
+/* Global Dark Mode Overrides - Using plain CSS to avoid Tailwind v4 compiler issues */
 .dark .bg-slate-50 {
-  @apply !bg-slate-900;
+  background-color: var(--color-slate-900) !important;
 }
 
 .dark .bg-white {
-  @apply !bg-slate-800;
+  background-color: var(--color-slate-800) !important;
 }
 
 .dark .bg-white\/80 {
-  @apply !bg-slate-800/80;
+  background-color: rgba(30, 41, 59, 0.8) !important;
 }
 
 .dark .text-slate-900 {
-  @apply !text-slate-50;
+  color: var(--color-slate-50) !important;
 }
 
 .dark .text-slate-800 {
-  @apply !text-slate-100;
+  color: var(--color-slate-100) !important;
 }
 
 .dark .text-slate-600 {
-  @apply !text-slate-300;
+  color: var(--color-slate-300) !important;
 }
 
 .dark .text-slate-500 {
-  @apply !text-slate-400;
+  color: var(--color-slate-400) !important;
 }
 
 .dark .border-slate-100, .dark .border-slate-200 {
-  @apply !border-slate-700;
+  border-color: var(--color-slate-700) !important;
 }
 
-/* Exception for the assistant button */
+/* Exception for items that must remain white */
 .dark .text-white {
-  @apply !text-white;
+  color: white !important;
 }
