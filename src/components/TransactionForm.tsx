@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, CreditCard, Target, Plus, Landmark, TrendingUp, Bitcoin, ShieldCheck, Wallet } from 'lucide-react';
+import { X, CreditCard, Target, Plus, Landmark, TrendingUp, Bitcoin, ShieldCheck, Wallet, Calendar } from 'lucide-react';
 import { Goal, Investment } from '../types';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
@@ -285,16 +285,19 @@ export default function TransactionForm({
             </div>
 
             {/* Date */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
+            <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 relative">
               <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-2">
                 Data
               </label>
-              <input
-                type="date"
-                value={date}
-                onChange={e => setDate(e.target.value)}
-                className="w-full bg-transparent border-none text-sm font-bold text-slate-900 dark:text-white focus:ring-0 p-0 dark:[color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-100 dark:[&::-webkit-calendar-picker-indicator]:invert transition-opacity"
-              />
+              <div className="flex items-center justify-between gap-2">
+                <input
+                  type="date"
+                  value={date}
+                  onChange={e => setDate(e.target.value)}
+                  className="flex-1 bg-transparent border-none text-sm font-bold text-slate-900 dark:text-white focus:ring-0 p-0 dark:[color-scheme:dark] [&::-webkit-calendar-picker-indicator]:hidden"
+                />
+                <Calendar size={16} className="text-slate-400 dark:text-slate-500 pointer-events-none" />
+              </div>
             </div>
           </div>
 
