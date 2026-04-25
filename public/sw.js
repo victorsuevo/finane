@@ -1,5 +1,5 @@
 // Basic Service Worker to make the app installable (PWA)
-const CACHE_NAME = 'finane-cache-v1';
+const CACHE_NAME = 'suevo-cache-v1';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
