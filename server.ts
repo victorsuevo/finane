@@ -112,6 +112,7 @@ async function setupTables() {
         `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS installment_ref INTEGER DEFAULT NULL`,
         `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS installment_num INTEGER DEFAULT 1`,
         `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS goal_id INTEGER DEFAULT NULL`,
+        `ALTER TABLE transactions ADD COLUMN IF NOT EXISTS investment_id INTEGER DEFAULT NULL`,
       ];
       for (const stmt of alterStatements) {
         try { await db_pg.query(stmt); } catch (_) {}
@@ -133,6 +134,7 @@ async function setupTables() {
         `ALTER TABLE transactions ADD COLUMN installment_ref INTEGER DEFAULT NULL`,
         `ALTER TABLE transactions ADD COLUMN installment_num INTEGER DEFAULT 1`,
         `ALTER TABLE transactions ADD COLUMN goal_id INTEGER DEFAULT NULL`,
+        `ALTER TABLE transactions ADD COLUMN investment_id INTEGER DEFAULT NULL`,
       ];
       for (const stmt of alterCols) {
         try { db_sqlite.exec(stmt); } catch (_) {}
