@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Wallet, TrendingUp, TrendingDown, Crown, Save, Check } from 'lucide-react';
+import { Plus, Wallet, TrendingUp, TrendingDown, Crown, Save, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Transaction, Summary, Goal } from './types';
 import { formatCurrency } from './lib/utils';
+import { format, subMonths, addMonths, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import TransactionForm from './components/TransactionForm';
 import TransactionList from './components/TransactionList';
 import AIInsights from './components/AIInsights';
@@ -27,6 +29,17 @@ export default function App() {
   const [showManager, setShowManager] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
+
+  const handlePrevMonth = () => {
+    setSelectedMonth(prev => format(subMonths(parseISO(`${prev}-01`), 1), 'yyyy-MM'));
+  };
+
+  const handleNextMonth = () => {
+    setSelectedMonth(prev => format(addMonths(parseISO(`${prev}-01`), 1), 'yyyy-MM'));
+  };
+
+  const monthLabel = format(parseISO(`${selectedMonth}-01`), "MMMM 'de' yyyy", { locale: ptBR });
 
   const fetchData = useCallback(async () => {
     if (!token) return;
@@ -85,6 +98,9 @@ export default function App() {
   };
 
   const balance = (summary.totalIncome || 0) - (summary.totalExpense || 0);
+  const monthTransactions = transactions.filter(t => t.date.startsWith(selectedMonth));
+  const monthIncome = monthTransactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const monthExpense = monthTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
   if (authLoading) return null;
   if (!user) return <Login />;
@@ -160,6 +176,19 @@ export default function App() {
           </h2>
         </div>
 
+        {/* Month Navigator */}
+        <div className="px-5 flex items-center justify-between">
+          <button onClick={handlePrevMonth} className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
+            <ChevronLeft size={18} className="text-slate-600" />
+          </button>
+          <div className="font-bold text-sm text-slate-800 capitalize tracking-wide">
+            {monthLabel}
+          </div>
+          <button onClick={handleNextMonth} className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
+            <ChevronRight size={18} className="text-slate-600" />
+          </button>
+        </div>
+
         {/* Summary Grid - Bento Style */}
         <div className="px-5 grid grid-cols-2 gap-3">
           <motion.div
@@ -170,7 +199,7 @@ export default function App() {
           >
             <p className="text-[10px] text-emerald-600 font-bold uppercase mb-1">Entradas</p>
             <p className="text-lg font-bold text-emerald-700 font-mono">
-              + {formatCurrency(summary.totalIncome || 0)}
+              + {formatCurrency(monthIncome)}
             </p>
           </motion.div>
           <motion.div
@@ -181,12 +210,12 @@ export default function App() {
           >
             <p className="text-[10px] text-rose-600 font-bold uppercase mb-1">Saídas</p>
             <p className="text-lg font-bold text-rose-700 font-mono">
-              - {formatCurrency(summary.totalExpense || 0)}
+              - {formatCurrency(monthExpense)}
             </p>
           </motion.div>
         </div>
 
-        <CategoryChart transactions={transactions} />
+        <CategoryChart transactions={monthTransactions} />
 
         <GoalList
           goals={goals}
@@ -195,24 +224,24 @@ export default function App() {
         />
 
         <ShareSummary
-          summary={summary}
-          transactions={transactions}
+          summary={{ totalIncome: monthIncome, totalExpense: monthExpense }}
+          transactions={monthTransactions}
           goals={goals}
           userName={user.name}
         />
 
-        <AIInsights transactions={transactions} />
+        <AIInsights transactions={monthTransactions} />
 
         {/* Transactions List */}
         <div className="space-y-4">
           <div className="px-5 flex justify-between items-end">
-            <h3 className="font-bold text-sm text-slate-900 tracking-tight">Histórico por Mês</h3>
+            <h3 className="font-bold text-sm text-slate-900 tracking-tight">Transações do Mês</h3>
             <span className="text-[10px] text-slate-400 font-bold">
-              {transactions.length} registros
+              {monthTransactions.length} registros
             </span>
           </div>
           <TransactionList
-            transactions={transactions}
+            transactions={monthTransactions}
             onDelete={handleDelete}
           />
         </div>
