@@ -1,9 +1,6 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-presence'; // Wait, it's framer-motion
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, HelpCircle, Plus, Target, Sparkles, BarChart3, Calendar, CreditCard, Search, TrendingUp, Wallet, ShieldCheck } from 'lucide-react';
-
-// Actually, I'll use framer-motion as confirmed before
-import { motion as M, AnimatePresence as AP } from 'framer-motion';
 
 interface Props {
   isOpen: boolean;
