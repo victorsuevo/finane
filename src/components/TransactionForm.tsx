@@ -388,7 +388,7 @@ export default function TransactionForm({
             }
           }}
           title="Tem certeza?"
-          message={`Você está prestes a excluir ${editTransaction.installments > 1 || editTransaction.installment_ref ? 'toda a série de parcelas desta compra' : 'esta transação'}. Esta ação não pode ser desfeita.`}
+          message={`Você está prestes a excluir ${editTransaction?.installments > 1 || editTransaction?.installment_ref ? 'toda a série de parcelas desta compra' : 'esta transação'}. Esta ação não pode ser desfeita.`}
           confirmLabel="Sim, Excluir"
         />
       </motion.div>
