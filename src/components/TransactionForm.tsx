@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { motion } from 'motion/react';
 import { X, CreditCard, Target } from 'lucide-react';
 import { Goal } from '../types';
@@ -54,6 +54,7 @@ export default function TransactionForm({
   const [installments, setInstallments] = useState(editTransaction ? editTransaction.installments : 1);
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { token } = useAuth();
 
   // Active (not completed) goals for the dropdown
@@ -168,12 +169,17 @@ export default function TransactionForm({
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">
               Valor
             </label>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-300">R$</span>
+            <div 
+              className="flex items-baseline gap-2 cursor-text"
+              onClick={() => inputRef.current?.focus()}
+            >
+              <span className="text-2xl font-black text-slate-300 select-none">R$</span>
               <input
+                ref={inputRef}
                 required
                 autoFocus
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 min="0.01"
                 placeholder="0,00"
