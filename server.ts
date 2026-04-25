@@ -30,7 +30,7 @@ if (DATABASE_URL) {
     connectionTimeoutMillis: 10000,
   });
 } else {
-  console.log("⚠️ ATENÇÃO: DATABASE_URL NÃO encontrada. Usando SQLite local (DADOS SERÃO PERDIDOS NO RESTART).");
+  console.log("⚠️ ATENÇÃO: DATABASE_URL NÃO encontrada. Usando SQLite local (Se estiver no Render, dados serão perdidos. Localmente está seguro).");
   db_sqlite = new Database("finance.db");
 }
 
