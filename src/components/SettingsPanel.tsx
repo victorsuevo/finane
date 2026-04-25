@@ -9,7 +9,7 @@ interface Props {
 
 export default function SettingsPanel({ onClose }: Props) {
   const { user, token } = useAuth();
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('app_theme') === 'dark');
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('finane_theme') === 'dark');
   const [currency, setCurrency] = useState(() => localStorage.getItem('app_currency') || 'BRL');
   const [name, setName] = useState(user?.name || '');
   const [loading, setLoading] = useState(false);
@@ -17,10 +17,10 @@ export default function SettingsPanel({ onClose }: Props) {
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('app_theme', 'dark');
+      localStorage.setItem('finane_theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('app_theme', 'light');
+      localStorage.setItem('finane_theme', 'light');
     }
   }, [darkMode]);
 

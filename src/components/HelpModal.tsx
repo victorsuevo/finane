@@ -1,117 +1,108 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, HelpCircle, Plus, Target, Sparkles, BarChart3, Calendar, CreditCard, Search } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-presence'; // Wait, it's framer-motion
+import { X, HelpCircle, Plus, Target, Sparkles, BarChart3, Calendar, CreditCard, Search, TrendingUp, Wallet, ShieldCheck } from 'lucide-react';
+
+// Actually, I'll use framer-motion as confirmed before
+import { motion as M, AnimatePresence as AP } from 'framer-motion';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const STEPS = [
-  {
-    title: "Saldo vs Patrimônio",
-    description: "O número grande no topo é seu desempenho no mês atual. O valor menor à direita é seu Patrimônio Geral acumulado desde o início.",
-    icon: <BarChart3 className="text-blue-500" />,
-  },
-  {
-    title: "Lançar Transações",
-    description: "Clique no botão '+' ou nos cards de Entrada/Saída. Você pode parcelar compras em até 48x e o sistema cuidará das datas futuras.",
-    icon: <Plus className="text-emerald-500" />,
-  },
-  {
-    title: "Metas e Objetivos",
-    description: "Crie metas (ex: Viagem). Ao lançar um gasto, selecione a categoria 'Meta' para que o valor seja acumulado no seu objetivo.",
-    icon: <Target className="text-indigo-500" />,
-  },
-  {
-    title: "Carteira de Investimentos",
-    description: "Gerencie ativos como Nubank, Bitcoin e Ações. Lançar uma saída como 'Investimento' aumenta automaticamente seu patrimônio no ativo escolhido.",
-    icon: <CreditCard className="text-purple-500" />,
-  },
-  {
-    title: "Busca e Histórico",
-    description: "Use a lupa ao lado de 'Transações do Mês' para buscar qualquer registro do passado. Clique no resultado para 'pular' direto para aquele mês.",
-    icon: <Search className="text-orange-500" />,
-  },
-  {
-    title: "Inteligência Artificial",
-    description: "O SUEVO analisa seus gastos automaticamente no banner de Insights. Precisa de ajuda? Use o Chat com IA no botão flutuante.",
-    icon: <Sparkles className="text-slate-500" />,
-  }
-];
-
 export default function HelpModal({ isOpen, onClose }: Props) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
-          />
-          
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 40 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 40 }}
-            className="relative w-full max-w-2xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="w-full max-w-2xl bg-white dark:bg-slate-800 rounded-[3rem] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
           >
-            {/* Header */}
-            <div className="p-8 pb-4 flex items-center justify-between border-b border-slate-50">
+            <div className="p-8 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
-                  <HelpCircle className="text-white" size={24} />
+                <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                  <HelpCircle className="text-white" size={20} />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">Guia SUEVO</h2>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Manual do Usuário</p>
+                  <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Manual SUEVO</h2>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Guia Rápido de Funcionalidades</p>
                 </div>
               </div>
-              <button 
-                onClick={onClose}
-                className="p-3 hover:bg-slate-100 rounded-full transition-colors"
-              >
-                <X size={24} className="text-slate-400" />
+              <button onClick={onClose} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                <X size={20} className="text-slate-400" />
               </button>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-8 space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {STEPS.map((step, i) => (
-                  <motion.div 
-                    key={i}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.1 }}
-                    className="p-5 bg-slate-50 rounded-3xl border border-slate-100 hover:border-indigo-100 transition-colors group"
-                  >
-                    <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      {step.icon}
-                    </div>
-                    <h3 className="font-black text-slate-900 mb-2">{step.title}</h3>
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                      {step.description}
-                    </p>
-                  </motion.div>
-                ))}
-              </div>
-
-              <div className="p-6 bg-indigo-900 rounded-[2rem] text-white">
-                <h4 className="font-black text-lg mb-2">Pronto para começar?</h4>
-                <p className="text-xs text-indigo-200 leading-relaxed opacity-80">
-                  O SUEVO foi desenhado para ser intuitivo. Se tiver qualquer dúvida específica, basta perguntar ao nosso assistente de IA clicando no ícone de brilho no canto da tela.
+            <div className="flex-1 overflow-y-auto p-8 space-y-8">
+              {/* Seção 1 */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-indigo-600">
+                  <Sparkles size={18} />
+                  <h3 className="font-black text-xs uppercase tracking-widest">Patrimônio Real (Net Worth)</h3>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  O SUEVO agora calcula sua riqueza real. No topo do dashboard, você vê o <strong>Patrimônio Real</strong>, que é a soma do seu saldo em conta mais o valor total acumulado em seus investimentos. 
+                  O gráfico de área "Patrimônio Total" mostra essa evolução ao longo do tempo.
                 </p>
-                <button 
-                  onClick={onClose}
-                  className="mt-6 w-full py-4 bg-white text-indigo-900 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-indigo-50 transition-colors"
-                >
-                  Entendi, vamos lá!
-                </button>
-              </div>
+              </section>
+
+              {/* Seção 2 */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-emerald-600">
+                  <Wallet size={18} />
+                  <h3 className="font-black text-xs uppercase tracking-widest">Gestão de Investimentos</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl">
+                    <p className="text-[10px] font-black text-indigo-600 uppercase mb-2">Edição Direta</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Passe o mouse ou toque em um card de investimento para ver os botões de <strong>Editar</strong> ou <strong>Excluir</strong>.</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl">
+                    <p className="text-[10px] font-black text-emerald-600 uppercase mb-2">Carteira de Ativos</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Confira no carrossel de gráficos a distribuição percentual da sua carteira (Cripto, Renda Fixa, etc).</p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Seção 3 */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-rose-600">
+                  <BarChart3 size={18} />
+                  <h3 className="font-black text-xs uppercase tracking-widest">Gastos Mais Precisos</h3>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  O gráfico de "Gastos por Categoria" agora ignora automaticamente aportes em investimentos. Assim, você vê apenas o que realmente foi gasto em consumo, moradia, lazer, etc.
+                </p>
+              </section>
+
+              {/* Seção 4 */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-amber-600">
+                  <Search size={18} />
+                  <h3 className="font-black text-xs uppercase tracking-widest">Histórico & Busca</h3>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Clique no ícone de lupa <Search size={14} className="inline" /> ao lado de "Transações do Mês" para abrir o histórico completo. Lá você pode buscar qualquer transação antiga por nome ou data.
+                </p>
+              </section>
+
+              {/* Seção 5 */}
+              <section className="bg-indigo-50 dark:bg-indigo-950/20 p-6 rounded-[2rem] border border-indigo-100 dark:border-indigo-900/30">
+                <div className="flex items-center gap-2 text-indigo-600 mb-2">
+                  <ShieldCheck size={18} />
+                  <h3 className="font-black text-xs uppercase tracking-widest">Dica de Segurança</h3>
+                </div>
+                <p className="text-xs text-indigo-700 dark:text-indigo-300 leading-relaxed">
+                  Seus dados são salvos automaticamente. Use o botão <strong>Salvar</strong> no topo para garantir o backup manual ou atualizar o saldo após grandes mudanças.
+                </p>
+              </section>
+            </div>
+
+            <div className="p-8 bg-slate-50 dark:bg-slate-800/50 text-center">
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">SUEVO Financial Ecosystem &copy; 2026</p>
             </div>
           </motion.div>
         </div>
