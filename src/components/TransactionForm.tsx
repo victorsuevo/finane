@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { X, CreditCard, Target, Plus, Landmark, TrendingUp, Bitcoin, ShieldCheck, Wallet } from 'lucide-react';
 import { Goal, Investment } from '../types';
 import { cn } from '../lib/utils';

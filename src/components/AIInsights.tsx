@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { Sparkles, Loader2, ChevronDown, ChevronUp, EyeOff } from 'lucide-react';
 import { Transaction, Goal } from '../types';
 import { getFinancialInsights } from '../services/geminiService';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Props {
   transactions: Transaction[];

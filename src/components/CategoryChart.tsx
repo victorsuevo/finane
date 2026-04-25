@@ -7,7 +7,7 @@ import {
 import { Transaction, Investment } from '../types';
 import { format, subMonths, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, BarChart3, LineChart as LineIcon, PieChart as PieIcon, AreaChart as AreaIcon, Layers, Wallet } from 'lucide-react';
 
 interface Props {

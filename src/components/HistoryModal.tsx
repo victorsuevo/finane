@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Calendar, ArrowRight } from 'lucide-react';
 import { Transaction } from '../types';
 import { formatCurrency, cn } from '../lib/utils';

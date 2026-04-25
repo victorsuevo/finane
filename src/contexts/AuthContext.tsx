@@ -20,8 +20,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const savedToken = localStorage.getItem('finane_token');
     const savedUser = localStorage.getItem('finane_user');
     if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
+      try {
+        setToken(savedToken);
+        setUser(JSON.parse(savedUser));
+      } catch (err) {
+        console.error("Erro ao restaurar sessão:", err);
+        localStorage.removeItem('finane_token');
+        localStorage.removeItem('finane_user');
+      }
     }
     setIsLoading(false);
   }, []);

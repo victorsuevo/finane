@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { TrendingUp, Wallet, Landmark, Bitcoin, ShieldCheck, Plus } from 'lucide-react';
 import { Investment } from '../types';
 import { formatCurrency } from '../lib/utils';

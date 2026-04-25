@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Wallet, TrendingUp, TrendingDown, Crown, Save, Check, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { Transaction, Summary, Goal, Investment } from './types';
 import { formatCurrency, cn } from './lib/utils';
