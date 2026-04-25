@@ -21,7 +21,7 @@ const INCOME_CATEGORIES = [
 
 const BASE_EXPENSE_CATEGORIES = [
   'Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Educação',
-  'Moradia', 'Mercado', 'Assinaturas', 'Outros'
+  'Moradia', 'Mercado', 'Assinaturas', 'Despesas Pessoais', 'Seguros', 'Outros'
 ];
 
 // Prefix used to identify goal-categories in the select

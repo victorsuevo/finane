@@ -26,6 +26,8 @@ const CATEGORY_ICONS: Record<string, string> = {
   'Freelance': '💼',
   'Presente': '🎁',
   'Venda': '🏷️',
+  'Despesas Pessoais': '👔',
+  'Seguros': '🛡️',
 };
 
 function getCategoryIcon(category: string): string {
