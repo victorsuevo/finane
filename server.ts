@@ -192,7 +192,7 @@ async function startServer() {
     let { email, password } = req.body;
     email = email.toLowerCase().trim();
     try {
-      const { rows } = await query("SELECT * FROM users WHERE email = ?", [email]);
+      const { rows } = await query("SELECT * FROM users WHERE LOWER(email) = LOWER(?)", [email]);
       const user = rows[0];
       if (!user) return res.status(401).json({ error: "Usuário não encontrado" });
       const isPasswordValid = await bcrypt.compare(password, user.password);
