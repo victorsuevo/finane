@@ -1,6 +1,6 @@
 import React from 'react';
 import { Share2, Copy, Check, FileText } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Transaction, Summary, Goal } from '../types';
 import { formatCurrency } from '../lib/utils';
 import { format, parseISO } from 'date-fns';

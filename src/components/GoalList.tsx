@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { Target, Calendar, Trash2, PiggyBank } from 'lucide-react';
 import { Goal } from '../types';
 import { formatCurrency } from '../lib/utils';
