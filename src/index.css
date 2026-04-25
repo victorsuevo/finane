@@ -23,38 +23,38 @@
 
 /* Global Dark Mode Overrides for existing light classes */
 .dark .bg-slate-50 {
-  @apply bg-slate-900 !important;
+  @apply !bg-slate-900;
 }
 
 .dark .bg-white {
-  @apply bg-slate-800 !important;
+  @apply !bg-slate-800;
 }
 
 .dark .bg-white\/80 {
-  @apply bg-slate-800\/80 !important;
+  @apply !bg-slate-800\/80;
 }
 
 .dark .text-slate-900 {
-  @apply text-slate-50 !important;
+  @apply !text-slate-50;
 }
 
 .dark .text-slate-800 {
-  @apply text-slate-100 !important;
+  @apply !text-slate-100;
 }
 
 .dark .text-slate-600 {
-  @apply text-slate-300 !important;
+  @apply !text-slate-300;
 }
 
 .dark .text-slate-500 {
-  @apply text-slate-400 !important;
+  @apply !text-slate-400;
 }
 
 .dark .border-slate-100, .dark .border-slate-200 {
-  @apply border-slate-700 !important;
+  @apply !border-slate-700;
 }
 
 /* Exception for the assistant button */
 .dark .text-white {
-  @apply text-white !important;
+  @apply !text-white;
 }
