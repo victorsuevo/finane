@@ -17,6 +17,7 @@ import ShareSummary from './components/ShareSummary';
 import ManagerPanel from './components/ManagerPanel';
 import SettingsPanel from './components/SettingsPanel';
 import ConfirmModal from './components/ConfirmModal';
+import HelpModal from './components/HelpModal';
 import { useAuth } from './contexts/AuthContext';
 import { LogOut } from 'lucide-react';
 
@@ -30,6 +31,7 @@ export default function App() {
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [showManager, setShowManager] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -134,6 +136,13 @@ export default function App() {
             <Wallet className="text-white" size={18} />
           </button>
           <h1 className="font-black text-lg tracking-tight uppercase">SUEVO</h1>
+          <button 
+            onClick={() => setShowHelp(true)}
+            className="w-6 h-6 flex items-center justify-center rounded-full border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all ml-1"
+            title="Ajuda"
+          >
+            <span className="text-xs font-black">?</span>
+          </button>
         </div>
         <div className="flex items-center gap-3">
           {/* Save Button */}
@@ -319,6 +328,11 @@ export default function App() {
         title="Excluir Transação?"
         message="Tem certeza que deseja remover este registro? Se for uma compra parcelada, TODAS as parcelas da série serão excluídas."
         confirmLabel="Sim, Excluir"
+      />
+
+      <HelpModal 
+        isOpen={showHelp}
+        onClose={() => setShowHelp(false)}
       />
     </div>
   );
