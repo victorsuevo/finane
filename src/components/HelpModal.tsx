@@ -9,34 +9,34 @@ interface Props {
 
 const STEPS = [
   {
-    title: "Navegação Mensal",
-    description: "Use as setas no topo para navegar entre os meses. O saldo e as transações mudarão automaticamente para o período selecionado.",
-    icon: <Calendar className="text-blue-500" />,
+    title: "Saldo vs Patrimônio",
+    description: "O número grande no topo é seu desempenho no mês atual. O valor menor à direita é seu Patrimônio Geral acumulado desde o início.",
+    icon: <BarChart3 className="text-blue-500" />,
   },
   {
     title: "Lançar Transações",
-    description: "Clique no botão '+' ou nos cards de Entrada/Saída. Você pode parcelar compras em até 48x e o sistema cuidará das datas futuras para você.",
+    description: "Clique no botão '+' ou nos cards de Entrada/Saída. Você pode parcelar compras em até 48x e o sistema cuidará das datas futuras.",
     icon: <Plus className="text-emerald-500" />,
   },
   {
     title: "Metas e Objetivos",
-    description: "Crie metas (ex: Reserva de Emergência). Ao lançar um gasto, selecione a categoria 'Meta' para que o valor seja acumulado no seu objetivo.",
+    description: "Crie metas (ex: Viagem). Ao lançar um gasto, selecione a categoria 'Meta' para que o valor seja acumulado no seu objetivo.",
     icon: <Target className="text-indigo-500" />,
   },
   {
+    title: "Carteira de Investimentos",
+    description: "Gerencie ativos como Nubank, Bitcoin e Ações. Lançar uma saída como 'Investimento' aumenta automaticamente seu patrimônio no ativo escolhido.",
+    icon: <CreditCard className="text-purple-500" />,
+  },
+  {
+    title: "Busca e Histórico",
+    description: "Use a lupa ao lado de 'Transações do Mês' para buscar qualquer registro do passado. Clique no resultado para 'pular' direto para aquele mês.",
+    icon: <Search className="text-orange-500" />,
+  },
+  {
     title: "Inteligência Artificial",
-    description: "O banner de Insights analisa seus gastos automaticamente. Se precisar de ajuda, use o botão flutuante para conversar com o assistente SUEVO.",
-    icon: <Sparkles className="text-purple-500" />,
-  },
-  {
-    title: "Análise Visual",
-    description: "Deslize para os lados no card de gráficos para alternar entre: Gastos por Categoria, Evolução Mensal, Distribuição, Patrimônio e Composição.",
-    icon: <BarChart3 className="text-orange-500" />,
-  },
-  {
-    title: "Edição e Exclusão",
-    description: "Clique em qualquer transação para editar. Se for parcelada, você pode atualizar a série toda ou excluí-la de uma vez só.",
-    icon: <CreditCard className="text-slate-500" />,
+    description: "O SUEVO analisa seus gastos automaticamente no banner de Insights. Precisa de ajuda? Use o Chat com IA no botão flutuante.",
+    icon: <Sparkles className="text-slate-500" />,
   }
 ];
 
