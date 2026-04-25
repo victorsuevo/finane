@@ -167,7 +167,8 @@ async function startServer() {
 
   // --- Auth Routes ---
   app.post("/api/auth/register", async (req, res) => {
-    const { name, email, password } = req.body;
+    let { name, email, password } = req.body;
+    email = email.toLowerCase().trim();
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
       const info = await query(
@@ -176,6 +177,7 @@ async function startServer() {
       );
       const userId = info.lastInsertRowid;
       const token = jwt.sign({ id: userId, email, name, is_manager: false }, JWT_SECRET, { expiresIn: '7d' });
+      console.log(`[AUTH] Novo usuário registrado: ${email} (ID: ${userId})`);
       res.json({ token, user: { id: userId, name, email, is_manager: false } });
     } catch (error: any) {
       if (error.message.includes("UNIQUE") || error.code === '23505') {
@@ -187,7 +189,8 @@ async function startServer() {
   });
 
   app.post("/api/auth/login", async (req, res) => {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
+    email = email.toLowerCase().trim();
     try {
       const { rows } = await query("SELECT * FROM users WHERE email = ?", [email]);
       const user = rows[0];
@@ -200,6 +203,7 @@ async function startServer() {
         JWT_SECRET,
         { expiresIn: '7d' }
       );
+      console.log(`[AUTH] Login bem-sucedido: ${email} (ID: ${user.id})`);
       res.json({ token, user: { id: user.id, name: user.name, email: user.email, is_manager: isManager } });
     } catch (error: any) {
       console.error("Login error:", error);
