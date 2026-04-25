@@ -89,21 +89,21 @@ export default function TransactionList({ transactions, onDelete, onEdit }: Prop
         </div>
         
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-slate-200/50 dark:bg-slate-800/50 p-1 rounded-xl">
             <button 
               onClick={() => setGroupBy('date')} 
-              className={cn("p-2 rounded-lg flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter transition-all", groupBy === 'date' ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900" : "text-slate-400")}
+              className={cn("px-3 py-1.5 rounded-lg flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter transition-all", groupBy === 'date' ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200")}
             >
-              <LayoutList size={14} /> Por Data
+              <LayoutList size={12} /> Data
             </button>
             <button 
               onClick={() => setGroupBy('category')} 
-              className={cn("p-2 rounded-lg flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter transition-all", groupBy === 'category' ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900" : "text-slate-400")}
+              className={cn("px-3 py-1.5 rounded-lg flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter transition-all", groupBy === 'category' ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200")}
             >
-              <LayoutGrid size={14} /> Por Categoria
+              <LayoutGrid size={12} /> Categoria
             </button>
           </div>
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{filteredTransactions.length} itens</span>
+          <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{filteredTransactions.length} itens</span>
         </div>
       </div>
 
