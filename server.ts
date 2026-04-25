@@ -528,7 +528,7 @@ async function startServer() {
         Contexto do Usuário (últimas transações): ${JSON.stringify(transactions.slice(0, 30))}
         Pergunta do usuário: ${message}
       `;
-      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -555,7 +555,7 @@ async function startServer() {
         Aja como um consultor financeiro pessoal em português. Analise estas transações e dê 3 dicas curtas e práticas:
         ${JSON.stringify(transactions.slice(0, 50))}
       `;
-      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
