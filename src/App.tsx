@@ -122,7 +122,11 @@ export default function App() {
   const monthExpense = monthTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount || 0), 0);
   const monthBalance = monthIncome - monthExpense;
 
-  if (authLoading) return null;
+  if (authLoading) return (
+    <div className="min-h-screen bg-[#0f172a] flex items-center justify-center text-white font-black uppercase tracking-widest text-xs">
+      Carregando SUEVO...
+    </div>
+  );
   if (!user) return <Login />;
 
   return (
