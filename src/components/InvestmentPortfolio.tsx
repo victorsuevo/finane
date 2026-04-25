@@ -65,16 +65,16 @@ export default function InvestmentPortfolio({ investments, onAdd, onRefresh, onE
                 <div className={`p-2 rounded-xl ${config.bg}`}>
                   <config.icon className={config.color} size={18} />
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-1 transition-opacity">
                   <button 
                     onClick={() => onEdit(inv)}
-                    className="p-1.5 bg-slate-50 dark:bg-slate-700 text-slate-400 hover:text-indigo-600 rounded-lg transition-colors"
+                    className="p-1.5 bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 border border-transparent dark:border-slate-800 rounded-lg transition-colors"
                   >
                     <Edit2 size={12} />
                   </button>
                   <button 
                     onClick={() => setDeleteId(inv.id!)}
-                    className="p-1.5 bg-slate-50 dark:bg-slate-700 text-slate-400 hover:text-rose-600 rounded-lg transition-colors"
+                    className="p-1.5 bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 border border-transparent dark:border-slate-800 rounded-lg transition-colors"
                   >
                     <Trash2 size={12} />
                   </button>
@@ -91,12 +91,12 @@ export default function InvestmentPortfolio({ investments, onAdd, onRefresh, onE
           onClick={onAdd}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="bg-slate-50 dark:bg-slate-800/50 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-[2rem] p-4 flex flex-col items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all min-h-[120px]"
+          className="bg-slate-50 dark:bg-black border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] p-4 flex flex-col items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all min-h-[120px]"
         >
-          <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm">
-            <Plus className="text-slate-400" size={20} />
+          <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center shadow-sm">
+            <Plus className="text-slate-400 dark:text-slate-500" size={20} />
           </div>
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Definir Carteira</span>
+          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Definir Carteira</span>
         </motion.button>
       </div>
 
