@@ -2,32 +2,30 @@ import { useState, useMemo } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   LineChart, Line, PieChart, Pie, AreaChart, Area,
-  Bar as ReBar, CartesianGrid, Legend
+  CartesianGrid, Legend
 } from 'recharts';
-import { Transaction } from '../types';
-import { format, subMonths, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { Transaction, Investment } from '../types';
+import { format, subMonths, parseISO, ptBR } from 'date-fns';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight, BarChart3, LineChart as LineIcon, PieChart as PieIcon, AreaChart as AreaIcon, Layers } from 'lucide-react';
+import { ChevronLeft, ChevronRight, BarChart3, LineChart as LineIcon, PieChart as PieIcon, AreaChart as AreaIcon, Layers, Wallet } from 'lucide-react';
 
 interface Props {
   transactions: Transaction[];
   currentMonth: string; // format: "yyyy-MM"
+  investments: Investment[];
 }
 
 const COLORS = ['#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#ef4444', '#f97316', '#f59e0b', '#eab308'];
 
-export default function CategoryChart({ transactions, currentMonth }: Props) {
+export default function CategoryChart({ transactions, currentMonth, investments }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
-
-  // --- Data Calculations ---
 
   const currentMonthDate = parseISO(`${currentMonth}-01`);
 
-  // 1. Bar & Pie Data (Current Month Expenses)
+  // 1. Current Month Expenses (excluding Investment contributions to not skew regular spending)
   const monthExpenseData = useMemo(() => {
     const expenses = transactions
-      .filter(t => t.type === 'expense' && t.date.startsWith(currentMonth))
+      .filter(t => t.type === 'expense' && t.date.startsWith(currentMonth) && !t.investment_id)
       .reduce((acc, t) => {
         acc[t.category] = (acc[t.category] || 0) + t.amount;
         return acc;
@@ -38,7 +36,24 @@ export default function CategoryChart({ transactions, currentMonth }: Props) {
       .sort((a, b) => b.value - a.value);
   }, [transactions, currentMonth]);
 
-  // 2. Evolution Data (Last 6 Months)
+  // 2. Investment Portfolio Distribution
+  const investmentDistribution = useMemo(() => {
+    const dist = investments.reduce((acc, inv) => {
+      const typeLabel = {
+        'renda_fixa': 'Renda Fixa',
+        'renda_variavel': 'Variável',
+        'cripto': 'Cripto',
+        'reserva': 'Reserva'
+      }[inv.type] || inv.type;
+      
+      acc[typeLabel] = (acc[typeLabel] || 0) + inv.current_amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(dist).map(([name, value]) => ({ name, value }));
+  }, [investments]);
+
+  // 3. Evolution Data (Last 6 Months)
   const evolutionData = useMemo(() => {
     const months = Array.from({ length: 6 }).map((_, i) => {
       const d = subMonths(currentMonthDate, 5 - i);
@@ -54,13 +69,11 @@ export default function CategoryChart({ transactions, currentMonth }: Props) {
     });
   }, [transactions, currentMonthDate]);
 
-  // 3. Area Data (Cumulative Balance)
+  // 4. Net Worth (Cumulative Balance + Investments)
   const areaData = useMemo(() => {
     let cumulative = 0;
-    // We sort all transactions by date to get the real flow
     const sortedTxs = [...transactions].sort((a, b) => a.date.localeCompare(b.date));
     
-    // Group by month to keep it readable
     const monthMap = {} as Record<string, number>;
     sortedTxs.forEach(t => {
       const m = t.date.substring(0, 7);
@@ -69,23 +82,25 @@ export default function CategoryChart({ transactions, currentMonth }: Props) {
     });
 
     const months = Object.keys(monthMap).sort();
-    // Only show last 8 months or so
     const recentMonths = months.slice(-8);
+
+    // Sum of initial investment amounts (this is an approximation since we don't have historical snapshots)
+    const currentInvestTotal = investments.reduce((acc, inv) => acc + inv.current_amount, 0);
 
     return recentMonths.map(m => {
       cumulative += monthMap[m];
       return {
         name: format(parseISO(`${m}-01`), 'MMM', { locale: ptBR }),
-        saldo: cumulative
+        saldo: cumulative + currentInvestTotal
       };
     });
-  }, [transactions]);
+  }, [transactions, investments]);
 
   const charts = [
     {
       id: 'bar',
       title: 'Gastos por Categoria',
-      subtitle: 'Valores absolutos do mês',
+      subtitle: 'Despesas do mês (excl. investimentos)',
       icon: <BarChart3 size={16} />,
       render: () => (
         <ResponsiveContainer width="100%" height="100%">
@@ -112,6 +127,34 @@ export default function CategoryChart({ transactions, currentMonth }: Props) {
       )
     },
     {
+      id: 'invest_pie',
+      title: 'Carteira de Ativos',
+      subtitle: 'Composição dos investimentos',
+      icon: <Wallet size={16} />,
+      render: () => (
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={investmentDistribution}
+              cx="50%"
+              cy="50%"
+              innerRadius={50}
+              outerRadius={70}
+              paddingAngle={5}
+              dataKey="value"
+            >
+              {investmentDistribution.map((_, i) => <Cell key={i} fill={COLORS[(i + 2) % COLORS.length]} />)}
+            </Pie>
+            <Tooltip 
+              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
+              formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            />
+            <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: '9px', fontWeight: 600 }} />
+          </PieChart>
+        </ResponsiveContainer>
+      )
+    },
+    {
       id: 'line',
       title: 'Evolução Mensal',
       subtitle: 'Entradas vs Saídas (6 meses)',
@@ -134,8 +177,8 @@ export default function CategoryChart({ transactions, currentMonth }: Props) {
     },
     {
       id: 'pie',
-      title: 'Distribuição',
-      subtitle: 'Proporção dos gastos',
+      title: 'Distribuição de Gastos',
+      subtitle: 'Proporção das despesas',
       icon: <PieIcon size={16} />,
       render: () => (
         <ResponsiveContainer width="100%" height="100%">
@@ -162,8 +205,8 @@ export default function CategoryChart({ transactions, currentMonth }: Props) {
     },
     {
       id: 'area',
-      title: 'Patrimônio',
-      subtitle: 'Saldo acumulado histórico',
+      title: 'Patrimônio Total',
+      subtitle: 'Saldo + Investimentos',
       icon: <AreaIcon size={16} />,
       render: () => (
         <ResponsiveContainer width="100%" height="100%">
@@ -177,8 +220,9 @@ export default function CategoryChart({ transactions, currentMonth }: Props) {
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} />
             <Tooltip 
               contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px' }}
+              formatter={(value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             />
-            <Area type="monotone" dataKey="saldo" stroke="#6366f1" fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={3} />
+            <Area type="monotone" dataKey="saldo" name="Patrimônio" stroke="#6366f1" fillOpacity={1} fill="url(#colorSaldo)" strokeWidth={3} />
           </AreaChart>
         </ResponsiveContainer>
       )
