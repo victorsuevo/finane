@@ -25,6 +25,7 @@ const BASE_EXPENSE_CATEGORIES = [
   'Moradia', 'Mercado', 'Assinaturas', 'Despesas Pessoais', 'Seguros', 'Outros'
 ];
 
+const GOAL_PREFIX = '__GOAL__';
 const INVEST_PREFIX = '__INVEST__';
 
 export default function TransactionForm({
