@@ -125,12 +125,13 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
               tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }}
             />
             <Tooltip 
+              cursor={{ fill: 'transparent' }}
               contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', backgroundColor: 'rgba(15, 23, 42, 0.95)', color: '#fff' }}
               itemStyle={{ color: '#fff' }}
               labelStyle={{ color: '#fff' }}
               formatter={(value: number) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), 'Gasto']}
             />
-            <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={12}>
+            <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={12} activeBar={false}>
               {monthExpenseData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
             </Bar>
           </BarChart>
@@ -157,6 +158,7 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
               {investmentDistribution.map((_, i) => <Cell key={i} fill={COLORS[(i + 2) % COLORS.length]} />)}
             </Pie>
             <Tooltip 
+              cursor={{ fill: 'transparent' }}
               contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', backgroundColor: 'rgba(15, 23, 42, 0.95)', color: '#fff' }}
               itemStyle={{ color: '#fff' }}
               labelStyle={{ color: '#fff' }}
@@ -179,6 +181,7 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
             <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} />
             <YAxis hide />
             <Tooltip 
+              cursor={{ stroke: 'transparent' }}
               contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', backgroundColor: 'rgba(15, 23, 42, 0.95)', color: '#fff' }}
               itemStyle={{ color: '#fff' }}
               labelStyle={{ color: '#fff' }}
@@ -206,6 +209,7 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
             </defs>
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} />
             <Tooltip 
+              cursor={{ stroke: 'transparent' }}
               contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', backgroundColor: 'rgba(15, 23, 42, 0.95)', color: '#fff' }}
               itemStyle={{ color: '#fff' }}
               labelStyle={{ color: '#fff' }}
@@ -228,13 +232,14 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
             <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} />
             <YAxis hide />
             <Tooltip 
+              cursor={{ fill: 'transparent' }}
               contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', backgroundColor: 'rgba(15, 23, 42, 0.95)', color: '#fff' }}
               itemStyle={{ color: '#fff' }}
               labelStyle={{ color: '#fff' }}
             />
             <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 700, paddingTop: '10px' }} />
-            <Bar dataKey="income" name="Entradas" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
-            <Bar dataKey="expense" name="Saídas" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="income" name="Entradas" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} activeBar={false} />
+            <Bar dataKey="expense" name="Saídas" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} activeBar={false} />
           </BarChart>
         </ResponsiveContainer>
       )
