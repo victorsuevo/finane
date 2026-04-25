@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, HelpCircle, Plus, Target, Sparkles, BarChart3, Calendar, CreditCard } from 'lucide-react';
+import { X, HelpCircle, Plus, Target, Sparkles, BarChart3, Calendar, CreditCard, Search } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
