@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Wallet, TrendingUp, TrendingDown, Crown, Save, Check, ChevronLeft, ChevronRight, Search } from 'lucide-react';
-import { Transaction, Summary, Goal, Investment } from './types';
+import { Plus, Wallet, Save, Check, ChevronLeft, ChevronRight, LogOut, Crown } from 'lucide-react';
+import { Transaction, Summary, Goal } from './types';
 import { formatCurrency, cn } from './lib/utils';
 import { format, subMonths, addMonths, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -13,31 +13,24 @@ import ChatAssistant from './components/ChatAssistant';
 import Login from './components/Login';
 import GoalList from './components/GoalList';
 import GoalForm from './components/GoalForm';
-import InvestmentPortfolio from './components/InvestmentPortfolio';
-import InvestmentForm from './components/InvestmentForm';
 import ShareSummary from './components/ShareSummary';
 import ManagerPanel from './components/ManagerPanel';
 import SettingsPanel from './components/SettingsPanel';
 import ConfirmModal from './components/ConfirmModal';
 import HelpModal from './components/HelpModal';
-import HistoryModal from './components/HistoryModal';
 import { useAuth } from './contexts/AuthContext';
-import { LogOut } from 'lucide-react';
 
 export default function App() {
   const { user, token, logout, isLoading: authLoading } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [investments, setInvestments] = useState<Investment[]>([]);
   const [summary, setSummary] = useState<Summary>({ totalIncome: 0, totalExpense: 0 });
   const [showForm, setShowForm] = useState(false);
   const [formType, setFormType] = useState<'income' | 'expense'>('expense');
   const [showGoalForm, setShowGoalForm] = useState(false);
-  const [showInvestForm, setShowInvestForm] = useState(false);
   const [showManager, setShowManager] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -53,21 +46,14 @@ export default function App() {
   };
 
   const monthLabel = format(parseISO(`${selectedMonth}-01`), "MMMM 'de' yyyy", { locale: ptBR });
-  
-  const jumpToMonth = (dateStr: string) => {
-    const month = dateStr.substring(0, 7); // yyyy-MM
-    setSelectedMonth(month);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
 
   const fetchData = useCallback(async () => {
     if (!token) return;
     try {
-      const [tRes, sRes, gRes, iRes] = await Promise.all([
+      const [tRes, sRes, gRes] = await Promise.all([
         fetch('/api/transactions', { headers: { 'Authorization': `Bearer ${token}` } }),
         fetch('/api/summary', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/goals', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/investments', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch('/api/goals', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       if (tRes.status === 401 || tRes.status === 403) {
         logout();
@@ -76,11 +62,9 @@ export default function App() {
       const tData = await tRes.json();
       const sData = await sRes.json();
       const gData = await gRes.json();
-      const iData = await iRes.json();
       setTransactions(Array.isArray(tData) ? tData : []);
       setSummary(sData || { totalIncome: 0, totalExpense: 0 });
       setGoals(Array.isArray(gData) ? gData : []);
-      setInvestments(Array.isArray(iData) ? iData : []);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {
@@ -92,15 +76,6 @@ export default function App() {
     fetchData();
   }, [fetchData]);
 
-  useEffect(() => {
-    const theme = localStorage.getItem('app_theme');
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
-
   const handleSave = async () => {
     setSaveStatus('saving');
     await fetchData();
@@ -109,15 +84,10 @@ export default function App() {
   };
 
   const handleAfterAdd = async () => {
-    // Autosave: fetch fresh data immediately after any addition
     setSaveStatus('saving');
     await fetchData();
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus('idle'), 2000);
-  };
-
-  const handleDelete = (id: number) => {
-    setDeleteId(id);
   };
 
   const executeDelete = async () => {
@@ -145,37 +115,25 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-purple-100">
-      {/* Header */}
       <header className="fixed top-0 inset-x-0 h-16 bg-white/80 backdrop-blur-md z-40 px-6 flex items-center justify-between border-b border-slate-100">
         <div className="flex items-center gap-3">
           <button onClick={() => setShowSettings(true)} className="w-8 h-8 bg-purple-600 hover:bg-purple-700 transition-colors rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20 cursor-pointer">
             <Wallet className="text-white" size={18} />
           </button>
           <h1 className="font-black text-lg tracking-tight uppercase">SUEVO</h1>
-          <button 
-            onClick={() => setShowHelp(true)}
-            className="w-6 h-6 flex items-center justify-center rounded-full border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all ml-1"
-            title="Ajuda"
-          >
+          <button onClick={() => setShowHelp(true)} className="w-6 h-6 flex items-center justify-center rounded-full border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all ml-1">
             <span className="text-xs font-black">?</span>
           </button>
         </div>
         <div className="flex items-center gap-3">
-          {/* Save Button */}
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={handleSave}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors text-slate-600"
-          >
+          <motion.button whileTap={{ scale: 0.95 }} onClick={handleSave} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors text-slate-600">
             <AnimatePresence mode="wait">
               {saveStatus === 'saved' ? (
                 <motion.span key="saved" initial={{ scale: 0 }} animate={{ scale: 1 }} className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
                   <Check size={12} /> Salvo
                 </motion.span>
               ) : saveStatus === 'saving' ? (
-                <motion.span key="saving" className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Salvando...
-                </motion.span>
+                <motion.span key="saving" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Salvando...</motion.span>
               ) : (
                 <motion.span key="idle" className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest">
                   <Save size={12} /> Salvar
@@ -183,229 +141,101 @@ export default function App() {
               )}
             </AnimatePresence>
           </motion.button>
-
-          {/* Manager button (only for managers) */}
           {user.is_manager && (
-            <button
-              onClick={() => setShowManager(true)}
-              className="w-8 h-8 bg-amber-100 hover:bg-amber-200 rounded-full flex items-center justify-center transition-colors"
-              title="Painel do Gestor"
-            >
+            <button onClick={() => setShowManager(true)} className="w-8 h-8 bg-amber-100 hover:bg-amber-200 rounded-full flex items-center justify-center transition-colors">
               <Crown size={16} className="text-amber-600" />
             </button>
           )}
-
           <div className="flex flex-col items-end">
             <span className="text-[10px] font-bold text-slate-900 leading-none">{user.name}</span>
-            <button
-              onClick={logout}
-              className="text-[9px] font-bold text-rose-500 hover:text-rose-600 uppercase tracking-tighter flex items-center gap-0.5"
-            >
+            <button onClick={logout} className="text-[9px] font-bold text-rose-500 hover:text-rose-600 uppercase tracking-tighter flex items-center gap-0.5">
               <LogOut size={8} /> Sair
             </button>
-          </div>
-          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-            <span className="text-purple-700 font-bold text-[10px]">
-              {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-            </span>
           </div>
         </div>
       </header>
 
       <main className="max-w-md mx-auto pt-24 pb-12 space-y-6">
-        {/* Balance Section */}
         <div className="px-5">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black mb-1">
-                Resultado do Mês
-              </p>
-              <h2 className={cn(
-                "text-4xl font-black tracking-tighter leading-none transition-colors",
-                monthBalance >= 0 ? "text-slate-900" : "text-rose-600"
-              )}>
-                {monthBalance > 0 && "+ "}{formatCurrency(monthBalance)}
-              </h2>
-            </div>
-            <div className="text-right pb-1">
-              <p className="text-[9px] text-slate-400 uppercase tracking-widest font-black mb-0.5">
-                Patrimônio Geral
-              </p>
-              <p className={cn(
-                "text-sm font-black tracking-tight",
-                globalBalance >= 0 ? "text-emerald-600" : "text-rose-500"
-              )}>
-                {formatCurrency(globalBalance)}
-              </p>
-            </div>
-          </div>
+          <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black mb-1">Saldo do Mês</p>
+          <h2 className={cn("text-4xl font-black tracking-tighter leading-none transition-colors", monthBalance >= 0 ? "text-slate-900" : "text-rose-600")}>
+            {monthBalance > 0 && "+ "}{formatCurrency(monthBalance)}
+          </h2>
         </div>
 
-        {/* Month Navigator */}
         <div className="px-5 flex items-center justify-between">
           <button onClick={handlePrevMonth} className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
             <ChevronLeft size={18} className="text-slate-600" />
           </button>
-          <div className="font-bold text-sm text-slate-800 capitalize tracking-wide">
-            {monthLabel}
-          </div>
+          <div className="font-bold text-sm text-slate-800 capitalize tracking-wide">{monthLabel}</div>
           <button onClick={handleNextMonth} className="p-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
             <ChevronRight size={18} className="text-slate-600" />
           </button>
         </div>
 
-        {/* Summary Grid - Bento Style */}
         <div className="px-5 grid grid-cols-2 gap-3">
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => { setFormType('income'); setShowForm(true); }}
-            className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100/50 cursor-pointer transition-all hover:shadow-lg hover:shadow-emerald-500/10"
-          >
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => { setFormType('income'); setShowForm(true); }} className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100/50 cursor-pointer">
             <p className="text-[10px] text-emerald-600 font-bold uppercase mb-1">Entradas</p>
-            <p className="text-lg font-bold text-emerald-700 font-mono">
-              + {formatCurrency(monthIncome)}
-            </p>
+            <p className="text-lg font-bold text-emerald-700 font-mono">+ {formatCurrency(monthIncome)}</p>
           </motion.div>
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => { setFormType('expense'); setShowForm(true); }}
-            className="bg-rose-50 p-4 rounded-2xl border border-rose-100/50 cursor-pointer transition-all hover:shadow-lg hover:shadow-rose-500/10"
-          >
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => { setFormType('expense'); setShowForm(true); }} className="bg-rose-50 p-4 rounded-2xl border border-rose-100/50 cursor-pointer">
             <p className="text-[10px] text-rose-600 font-bold uppercase mb-1">Saídas</p>
-            <p className="text-lg font-bold text-rose-700 font-mono">
-              - {formatCurrency(monthExpense)}
-            </p>
+            <p className="text-lg font-bold text-rose-700 font-mono">- {formatCurrency(monthExpense)}</p>
           </motion.div>
         </div>
 
-        <CategoryChart 
-          transactions={transactions} 
-          currentMonth={selectedMonth} 
-          investments={investments}
-        />
+        <CategoryChart transactions={transactions} currentMonth={selectedMonth} />
 
-        <GoalList
-          goals={goals}
-          onAdd={() => setShowGoalForm(true)}
-          onRefresh={handleAfterAdd}
-        />
+        <GoalList goals={goals} onAdd={() => setShowGoalForm(true)} onRefresh={handleAfterAdd} />
 
-        <InvestmentPortfolio
-          investments={investments}
-          onAdd={() => setShowInvestForm(true)}
-        />
-
-        <ShareSummary
-          summary={{ totalIncome: monthIncome, totalExpense: monthExpense }}
-          transactions={monthTransactions}
-          goals={goals}
-          userName={user.name}
-        />
+        <ShareSummary summary={{ totalIncome: monthIncome, totalExpense: monthExpense }} transactions={monthTransactions} goals={goals} userName={user.name} />
 
         <AIInsights transactions={monthTransactions} goals={goals} />
 
-        {/* Transactions List */}
         <div className="space-y-4 pb-24">
           <div className="px-5 flex justify-between items-end">
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-sm text-slate-900 tracking-tight">Transações do Mês</h3>
-              <button 
-                onClick={() => setShowHistory(true)}
-                className="p-1 text-slate-300 hover:text-indigo-600 transition-colors"
-                title="Buscar no histórico"
-              >
-                <Search size={14} />
-              </button>
-            </div>
+            <h3 className="font-bold text-sm text-slate-900 tracking-tight">Transações do Mês</h3>
             <span className="text-[10px] text-slate-400 font-bold">
-              {monthTransactions.length} {monthTransactions.length === 1 ? 'registro' : 'registros'}
+              {monthTransactions.length} registros
             </span>
           </div>
-          <TransactionList
-            transactions={monthTransactions}
-            onDelete={handleDelete}
-            onEdit={(t) => { setEditTx(t); setFormType(t.type); setShowForm(true); }}
-          />
+          <TransactionList transactions={monthTransactions} onDelete={(id) => setDeleteId(id)} onEdit={(t) => { setEditTx(t); setFormType(t.type); setShowForm(true); }} />
         </div>
       </main>
 
-      {/* Floating Action Button */}
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => { setFormType('expense'); setShowForm(true); }}
-        className="fixed bottom-8 right-8 w-14 h-14 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl shadow-2xl z-50 flex items-center justify-center transition-colors"
-      >
+      <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => { setFormType('expense'); setShowForm(true); }} className="fixed bottom-8 right-8 w-14 h-14 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl shadow-2xl z-50 flex items-center justify-center transition-colors">
         <Plus size={28} />
       </motion.button>
 
       <ChatAssistant transactions={transactions} goals={goals} />
 
-      {/* Forms Overlay */}
       {showForm && (
         <TransactionForm
           initialType={formType}
           editTransaction={editTx}
           defaultDate={selectedMonth}
           goals={goals}
-          investments={investments}
-          onSuccess={() => {
-            handleAfterAdd();
-            setShowForm(false);
-          }}
+          onSuccess={() => { handleAfterAdd(); setShowForm(false); }}
           onClose={() => { setShowForm(false); setEditTx(null); }}
         />
       )}
 
       {showGoalForm && (
-        <GoalForm
-          onSuccess={() => {
-            handleAfterAdd();
-            setShowGoalForm(false);
-          }}
-          onClose={() => setShowGoalForm(false)}
-        />
+        <GoalForm onSuccess={() => { handleAfterAdd(); setShowGoalForm(false); }} onClose={() => setShowGoalForm(false)} />
       )}
 
-      {showInvestForm && (
-        <InvestmentForm
-          onSuccess={() => {
-            handleAfterAdd();
-            setShowInvestForm(false);
-          }}
-          onClose={() => setShowInvestForm(false)}
-        />
-      )}
-
-      {showManager && (
-        <ManagerPanel onClose={() => setShowManager(false)} />
-      )}
-      {showSettings && (
-        <SettingsPanel onClose={() => setShowSettings(false)} />
-      )}
+      {showManager && <ManagerPanel onClose={() => setShowManager(false)} />}
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
 
       <ConfirmModal
         isOpen={!!deleteId}
         onClose={() => setDeleteId(null)}
         onConfirm={executeDelete}
         title="Excluir Transação?"
-        message="Tem certeza que deseja remover este registro? Se for uma compra parcelada, TODAS as parcelas da série serão excluídas."
-        confirmLabel="Sim, Excluir"
+        message="Tem certeza que deseja remover este registro?"
       />
 
-      <HelpModal 
-        isOpen={showHelp}
-        onClose={() => setShowHelp(false)}
-      />
-
-      <HistoryModal
-        isOpen={showHistory}
-        onClose={() => setShowHistory(false)}
-        transactions={transactions}
-        onSelectTransaction={jumpToMonth}
-      />
+      <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
     </div>
   );
 }
