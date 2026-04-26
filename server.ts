@@ -659,6 +659,28 @@ async function startServer() {
     }
   });
 
+  // Maintenance: Update any user account
+  app.patch("/api/manager/users/:id/maintenance", authenticateToken, requireManager, async (req: any, res) => {
+    const { name, email, password } = req.body;
+    try {
+      if (password) {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await query(
+          "UPDATE users SET name = ?, email = ?, password = ? WHERE id = ?",
+          [name, email, hashedPassword, req.params.id]
+        );
+      } else {
+        await query(
+          "UPDATE users SET name = ?, email = ? WHERE id = ?",
+          [name, email, req.params.id]
+        );
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Erro na manutenção do usuário" });
+    }
+  });
+
   // Promote first user as manager (setup endpoint, one-time use)
   app.post("/api/manager/setup", async (req, res) => {
     const { secret } = req.body;

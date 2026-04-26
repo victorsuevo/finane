@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users, BarChart3, Trash2, Crown, Shield, X, ChevronUp, ChevronDown,
-  TrendingUp, Database, UserCheck
+  TrendingUp, Database, UserCheck, Pencil, Save, Lock
 } from 'lucide-react';
 import { formatCurrency } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,6 +26,9 @@ export default function ManagerPanel({ onClose }: { onClose: () => void }) {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', email: '', password: '' });
+  const [saving, setSaving] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -52,6 +55,29 @@ export default function ManagerPanel({ onClose }: { onClose: () => void }) {
       body: JSON.stringify({ is_manager: promote }),
     });
     fetchData();
+  };
+
+  const handleEdit = (u: UserRecord) => {
+    setEditingUser(u);
+    setEditForm({ name: u.name, email: u.email, password: '' });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingUser) return;
+    setSaving(true);
+    try {
+      await fetch(`/api/manager/users/${editingUser.id}/maintenance`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(editForm),
+      });
+      setEditingUser(null);
+      fetchData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id: number, name: string) => {
@@ -142,6 +168,12 @@ export default function ManagerPanel({ onClose }: { onClose: () => void }) {
                       </div>
                       <div className="flex items-center gap-2">
                         <button
+                          onClick={() => handleEdit(u)}
+                          className="p-2 bg-blue-50 text-blue-400 hover:bg-blue-100 hover:text-blue-600 rounded-xl transition-colors"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
                           onClick={() => handlePromote(u.id, !isManager)}
                           title={isManager ? 'Rebaixar' : 'Promover a Gestor'}
                           className={`p-2 rounded-xl transition-colors text-xs font-bold ${isManager ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
@@ -171,6 +203,77 @@ export default function ManagerPanel({ onClose }: { onClose: () => void }) {
             </p>
           </div>
         </div>
+
+        {/* Edit User Modal */}
+        <AnimatePresence>
+          {editingUser && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-white/90 backdrop-blur-md z-[60] flex items-center justify-center p-6"
+            >
+              <div className="w-full space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-black text-slate-900 uppercase tracking-tight">Manutenção de Conta</h4>
+                  <button onClick={() => setEditingUser(null)} className="p-1 hover:bg-slate-100 rounded-full transition-colors">
+                    <X size={20} className="text-slate-400" />
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
+                    <input 
+                      type="text" 
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
+                    <input 
+                      type="email" 
+                      value={editForm.email}
+                      onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nova Senha (deixe vazio para não alterar)</label>
+                    <div className="relative">
+                      <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                      <input 
+                        type="password" 
+                        placeholder="••••••••"
+                        value={editForm.password}
+                        onChange={(e) => setEditForm({...editForm, password: e.target.value})}
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-11 pr-4 py-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button 
+                    onClick={() => setEditingUser(null)}
+                    className="flex-1 py-3 text-sm font-black text-slate-500 uppercase tracking-widest hover:bg-slate-50 rounded-2xl transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={handleSaveEdit}
+                    disabled={saving}
+                    className="flex-1 py-3 bg-indigo-600 text-white text-sm font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-indigo-500/20 active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {saving ? 'Salvando...' : 'Salvar Alterações'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </motion.div>
   );

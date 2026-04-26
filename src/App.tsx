@@ -118,13 +118,22 @@ export default function App() {
   
   const monthGoals = goals.map(g => {
     const totalTransactionsSum = transactions
-      .filter(t => (Number(t.goal_id) === Number(g.id)) || (!t.goal_id && t.category === g.name))
+      .filter(t => {
+        const goalIdMatch = Number(t.goal_id) === Number(g.id);
+        const nameMatch = !t.goal_id && t.category.trim().toLowerCase() === g.name.trim().toLowerCase();
+        return goalIdMatch || nameMatch;
+      })
       .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
     
     const initialBalance = g.current_amount - totalTransactionsSum;
     
     const untilMonthTransactions = transactions
-      .filter(t => ((Number(t.goal_id) === Number(g.id)) || (!t.goal_id && t.category === g.name)) && t.date.substring(0, 7) <= selectedMonth)
+      .filter(t => {
+        const goalIdMatch = Number(t.goal_id) === Number(g.id);
+        const nameMatch = !t.goal_id && t.category.trim().toLowerCase() === g.name.trim().toLowerCase();
+        const dateMatch = t.date.substring(0, 7) <= selectedMonth;
+        return (goalIdMatch || nameMatch) && dateMatch;
+      })
       .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
 
     return { ...g, current_amount: Math.max(0, initialBalance + untilMonthTransactions) };
@@ -132,13 +141,22 @@ export default function App() {
 
   const monthInvestments = investments.map(inv => {
     const totalTransactionsSum = transactions
-      .filter(t => (Number(t.investment_id) === Number(inv.id)) || (!t.investment_id && t.category === inv.name))
+      .filter(t => {
+        const investIdMatch = Number(t.investment_id) === Number(inv.id);
+        const nameMatch = !t.investment_id && t.category.trim().toLowerCase() === inv.name.trim().toLowerCase();
+        return investIdMatch || nameMatch;
+      })
       .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
     
     const initialBalance = inv.current_amount - totalTransactionsSum;
     
     const untilMonthTransactions = transactions
-      .filter(t => ((Number(t.investment_id) === Number(inv.id)) || (!t.investment_id && t.category === inv.name)) && t.date.substring(0, 7) <= selectedMonth)
+      .filter(t => {
+        const investIdMatch = Number(t.investment_id) === Number(inv.id);
+        const nameMatch = !t.investment_id && t.category.trim().toLowerCase() === inv.name.trim().toLowerCase();
+        const dateMatch = t.date.substring(0, 7) <= selectedMonth;
+        return (investIdMatch || nameMatch) && dateMatch;
+      })
       .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
 
     return { ...inv, current_amount: Math.max(0, initialBalance + untilMonthTransactions) };

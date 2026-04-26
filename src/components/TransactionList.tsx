@@ -122,9 +122,16 @@ export default function TransactionList({ transactions, onDelete, onEdit, totalI
           return (
             <div key={key} className="space-y-2">
               <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                <h4 className="font-black text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest capitalize">
-                  {label}
-                </h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-black text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest capitalize">
+                    {label}
+                  </h4>
+                  {groupBy === 'category' && totalIncome > 0 && total < 0 && (
+                    <span className="text-[9px] font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 px-1.5 py-0.5 rounded-full">
+                      {(Math.abs(total) / totalIncome * 100).toFixed(1)}%
+                    </span>
+                  )}
+                </div>
                 <span className={cn("text-[10px] font-black px-2 py-0.5 rounded-full", total >= 0 ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600" : "bg-rose-50 dark:bg-rose-950/30 text-rose-600")}>
                   {total >= 0 ? '+' : ''}{formatCurrency(total)}
                 </span>
@@ -160,11 +167,6 @@ export default function TransactionList({ transactions, onDelete, onEdit, totalI
                             )}
                             {isGoalContrib && (
                               <span className="text-[9px] font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 px-1.5 py-0.5 rounded-full">Meta</span>
-                            )}
-                            {t.type === 'expense' && totalIncome > 0 && (
-                              <span className="text-[9px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded-full">
-                                {((t.amount / totalIncome) * 100).toFixed(1)}%
-                              </span>
                             )}
                           </div>
                         </div>
