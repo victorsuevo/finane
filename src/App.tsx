@@ -113,20 +113,20 @@ export default function App() {
   const monthBalance = monthIncome - monthExpense;
 
   // Calculate historical balances for goals and investments
-  const lastDayOfMonth = `${selectedMonth}-31`; // Simplified for comparison
-
+  // Logic: Value_at_Month = Current_Value (from DB) - Sum(Transactions AFTER that month)
+  
   const monthGoals = goals.map(g => {
-    const historicalAmount = transactions
-      .filter(t => t.goal_id === g.id && t.date <= lastDayOfMonth)
+    const futureTransactionsAmount = transactions
+      .filter(t => t.goal_id === g.id && t.date > `${selectedMonth}-31`)
       .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
-    return { ...g, current_amount: historicalAmount };
+    return { ...g, current_amount: Math.max(0, g.current_amount - futureTransactionsAmount) };
   });
 
   const monthInvestments = investments.map(inv => {
-    const historicalAmount = transactions
-      .filter(t => t.investment_id === inv.id && t.date <= lastDayOfMonth)
+    const futureTransactionsAmount = transactions
+      .filter(t => t.investment_id === inv.id && t.date > `${selectedMonth}-31`)
       .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
-    return { ...inv, current_amount: historicalAmount };
+    return { ...inv, current_amount: Math.max(0, inv.current_amount - futureTransactionsAmount) };
   });
 
   const totalInvestments = monthInvestments.reduce((acc, inv) => acc + (inv.current_amount || 0), 0);
