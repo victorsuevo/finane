@@ -367,18 +367,11 @@ async function startServer() {
           
           const finalDate = new Date(nextYear, nextMonth, targetDay, 12, 0, 0);
           const nextDateStr = finalDate.toISOString().split('T')[0];
-          const installDesc = `${description} (${i}/${totalInstallments})`;
           await query(
             "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_ref, installment_num, goal_id, investment_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [req.user.id, amount, category, installDesc, nextDateStr, type, totalInstallments, parentId, i, resolvedGoalId, resolvedInvestId]
+            [req.user.id, amount, category, description, nextDateStr, type, totalInstallments, parentId, i, resolvedGoalId, resolvedInvestId]
           );
         }
-        // Update first transaction description
-        const firstDesc = `${description} (1/${totalInstallments})`;
-        await query(
-          "UPDATE transactions SET description = ? WHERE id = ?",
-          [firstDesc, parentId]
-        );
         console.log(`[INSTALLMENTS] Sucesso ao gerar parcelas filhas para o pai ${parentId}`);
       }
 
@@ -466,13 +459,11 @@ async function startServer() {
             const targetDay = Math.min(day, nextDateLimit.getDate());
             const finalDate = new Date(nextYear, nextMonth, targetDay, 12, 0, 0);
             const nextDateStr = finalDate.toISOString().split('T')[0];
-            const installDesc = `${description} (${i}/${totalInstallments})`;
             await query(
               "INSERT INTO transactions (user_id, amount, category, description, date, type, installments, installment_ref, installment_num, goal_id, investment_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-              [req.user.id, amount, category, installDesc, nextDateStr, type, totalInstallments, newParentId, i, goal_id, investment_id]
+              [req.user.id, amount, category, description, nextDateStr, type, totalInstallments, newParentId, i, goal_id, investment_id]
             );
           }
-          await query("UPDATE transactions SET description = ? WHERE id = ?", [`${description} (1/${totalInstallments})`, newParentId]);
         }
 
         if (goal_id && type === 'expense') {
@@ -753,11 +744,19 @@ async function startServer() {
   }
 
   app.post("/api/ai/chat", authenticateToken, async (req: any, res) => {
-    const { message, transactions, goals = [] } = req.body;
+    const { message, transactions, goals = [], userName } = req.body;
     try {
       const goalsContext = goals.length > 0 ? `Metas do usuário (trate transações nestas categorias como investimentos/poupança, não como gastos negativos): ${JSON.stringify(goals)}` : '';
       const prompt = `
         Você é o "SUEVO", um assistente financeiro pessoal inteligente em português.
+        Nome do usuário: ${userName || 'Usuário'}
+        
+        REGRAS DE ESTILO:
+        1. Use um tom profissional, amigável e NEUTRO.
+        2. JAMAIS use termos de gênero como "Meu caro" ou "Meu senhor". Refira-se ao usuário pelo nome ou de forma neutra.
+        3. Fale 100% em PORTUGUÊS. Não use termos em inglês como "reached", "budget", etc.
+        4. Use termos financeiros corretos em português (ex: use "despesa" ou "gasto", jamais palavras inventadas como "expensão").
+        
         Contexto do Usuário (últimas transações): ${JSON.stringify(transactions.slice(0, 30))}
         ${goalsContext}
         Pergunta do usuário: ${message}
@@ -770,11 +769,19 @@ async function startServer() {
   });
 
   app.post("/api/ai/insights", authenticateToken, async (req: any, res) => {
-    const { transactions, goals = [] } = req.body;
+    const { transactions, goals = [], userName } = req.body;
     try {
       const goalsContext = goals.length > 0 ? `Metas do usuário: ${JSON.stringify(goals)}. IMPORTANTE: Se uma transação for para uma destas metas, ela é um INVESTIMENTO (positivo para o futuro), e não um gasto ruim.` : '';
       const prompt = `
-        Aja como um consultor financeiro pessoal em português. Analise estas transações e dê 3 dicas curtas e práticas.
+        Aja como um consultor financeiro pessoal em português. 
+        Nome do usuário: ${userName || 'Usuário'}
+
+        REGRAS CRÍTICAS:
+        1. Use um tom profissional e amigável, mas RIGOROSAMENTE NEUTRO em termos de gênero. NÃO use "Meu caro".
+        2. Não use palavras em inglês (ex: use "alcançado" em vez de "reached").
+        3. Use português correto (ex: "despesa", não "expensão").
+        4. Dê 3 dicas curtas e práticas analisando as transações.
+
         Contexto:
         - Transações: ${JSON.stringify(transactions.slice(0, 50))}
         - ${goalsContext}

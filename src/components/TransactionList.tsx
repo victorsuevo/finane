@@ -145,7 +145,7 @@ export default function TransactionList({ transactions, onDelete, onEdit }: Prop
                             title={t.description || t.category}
                             className="font-bold text-[13px] text-slate-900 dark:text-white leading-tight truncate max-w-[160px]"
                           >
-                            {t.description || t.category}
+                            {(t.description || t.category).replace(/\s*\(\d+\/\d+\)\s*$/, '')}
                           </p>
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="text-[10px] text-slate-400 font-medium tracking-tight">
