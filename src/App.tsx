@@ -118,13 +118,13 @@ export default function App() {
   
   const monthGoals = goals.map(g => {
     const totalTransactionsSum = transactions
-      .filter(t => Number(t.goal_id) === Number(g.id))
+      .filter(t => (Number(t.goal_id) === Number(g.id)) || (!t.goal_id && t.category === g.name))
       .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
     
     const initialBalance = g.current_amount - totalTransactionsSum;
     
     const untilMonthTransactions = transactions
-      .filter(t => Number(t.goal_id) === Number(g.id) && t.date.substring(0, 7) <= selectedMonth)
+      .filter(t => ((Number(t.goal_id) === Number(g.id)) || (!t.goal_id && t.category === g.name)) && t.date.substring(0, 7) <= selectedMonth)
       .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
 
     return { ...g, current_amount: Math.max(0, initialBalance + untilMonthTransactions) };
@@ -132,13 +132,13 @@ export default function App() {
 
   const monthInvestments = investments.map(inv => {
     const totalTransactionsSum = transactions
-      .filter(t => Number(t.investment_id) === Number(inv.id))
+      .filter(t => (Number(t.investment_id) === Number(inv.id)) || (!t.investment_id && t.category === inv.name))
       .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
     
     const initialBalance = inv.current_amount - totalTransactionsSum;
     
     const untilMonthTransactions = transactions
-      .filter(t => Number(t.investment_id) === Number(inv.id) && t.date.substring(0, 7) <= selectedMonth)
+      .filter(t => ((Number(t.investment_id) === Number(inv.id)) || (!t.investment_id && t.category === inv.name)) && t.date.substring(0, 7) <= selectedMonth)
       .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
 
     return { ...inv, current_amount: Math.max(0, initialBalance + untilMonthTransactions) };
@@ -278,6 +278,7 @@ export default function App() {
             transactions={monthTransactions} 
             onDelete={(t) => setDeleteTx(t)} 
             onEdit={(t) => { setEditTx(t); setFormType(t.type); setShowForm(true); }} 
+            totalIncome={monthIncome}
           />
         </div>
       </main>

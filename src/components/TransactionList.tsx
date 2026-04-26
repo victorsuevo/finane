@@ -9,6 +9,7 @@ interface Props {
   transactions: Transaction[];
   onDelete: (t: Transaction) => void;
   onEdit?: (t: Transaction) => void;
+  totalIncome: number;
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -34,7 +35,7 @@ function getCategoryIcon(category: string): string {
   return CATEGORY_ICONS[category] || '🏷️';
 }
 
-export default function TransactionList({ transactions, onDelete, onEdit }: Props) {
+export default function TransactionList({ transactions, onDelete, onEdit, totalIncome }: Props) {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [groupBy, setGroupBy] = useState<'date' | 'category'>('date');
 
@@ -159,6 +160,11 @@ export default function TransactionList({ transactions, onDelete, onEdit }: Prop
                             )}
                             {isGoalContrib && (
                               <span className="text-[9px] font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 px-1.5 py-0.5 rounded-full">Meta</span>
+                            )}
+                            {t.type === 'expense' && totalIncome > 0 && (
+                              <span className="text-[9px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-700/50 px-1.5 py-0.5 rounded-full">
+                                {((t.amount / totalIncome) * 100).toFixed(1)}%
+                              </span>
                             )}
                           </div>
                         </div>
