@@ -113,20 +113,35 @@ export default function App() {
   const monthBalance = monthIncome - monthExpense;
 
   // Calculate historical balances for goals and investments
-  // Logic: Value_at_Month = Current_Value (from DB) - Sum(Transactions AFTER that month)
+  // Logic: Initial_Balance = Current_Value (from DB) - Total_Transaction_Sum
+  // Value_at_Month = Initial_Balance + Sum(Transactions UNTIL that month)
   
   const monthGoals = goals.map(g => {
-    const futureTransactionsAmount = transactions
-      .filter(t => Number(t.goal_id) === Number(g.id) && t.date.substring(0, 7) > selectedMonth)
+    const totalTransactionsSum = transactions
+      .filter(t => Number(t.goal_id) === Number(g.id))
       .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
-    return { ...g, current_amount: Math.max(0, g.current_amount - futureTransactionsAmount) };
+    
+    const initialBalance = g.current_amount - totalTransactionsSum;
+    
+    const untilMonthTransactions = transactions
+      .filter(t => Number(t.goal_id) === Number(g.id) && t.date.substring(0, 7) <= selectedMonth)
+      .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
+
+    return { ...g, current_amount: Math.max(0, initialBalance + untilMonthTransactions) };
   });
 
   const monthInvestments = investments.map(inv => {
-    const futureTransactionsAmount = transactions
-      .filter(t => Number(t.investment_id) === Number(inv.id) && t.date.substring(0, 7) > selectedMonth)
+    const totalTransactionsSum = transactions
+      .filter(t => Number(t.investment_id) === Number(inv.id))
       .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
-    return { ...inv, current_amount: Math.max(0, inv.current_amount - futureTransactionsAmount) };
+    
+    const initialBalance = inv.current_amount - totalTransactionsSum;
+    
+    const untilMonthTransactions = transactions
+      .filter(t => Number(t.investment_id) === Number(inv.id) && t.date.substring(0, 7) <= selectedMonth)
+      .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
+
+    return { ...inv, current_amount: Math.max(0, initialBalance + untilMonthTransactions) };
   });
 
   const totalInvestments = monthInvestments.reduce((acc, inv) => acc + (inv.current_amount || 0), 0);

@@ -31,6 +31,10 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
   }, [currentMonth]);
 
   const monthExpenseData = useMemo(() => {
+    const totalIncome = (transactions || [])
+      .filter(t => t?.type === 'income' && t?.date?.startsWith(currentMonth))
+      .reduce((s, t) => s + t.amount, 0);
+
     const expenses = (transactions || [])
       .filter(t => t?.type === 'expense' && t?.date?.startsWith(currentMonth) && !t.investment_id)
       .reduce((acc, t) => {
@@ -39,7 +43,11 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
       }, {} as Record<string, number>);
 
     return Object.entries(expenses)
-      .map(([name, value]) => ({ name, value }))
+      .map(([name, value]) => ({ 
+        name, 
+        value,
+        percentage: totalIncome > 0 ? (value / totalIncome) * 100 : 0
+      }))
       .sort((a, b) => b.value - a.value);
   }, [transactions, currentMonth]);
 
@@ -129,7 +137,11 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
               contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', backgroundColor: 'rgba(15, 23, 42, 0.95)', color: '#fff' }}
               itemStyle={{ color: '#fff' }}
               labelStyle={{ color: '#fff' }}
-              formatter={(value: number) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), 'Gasto']}
+              formatter={(value: number, name: string, props: any) => {
+                const currency = value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                const percent = props.payload.percentage.toFixed(1);
+                return [`${currency} (${percent}%)`, 'Gasto'];
+              }}
             />
             <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={12} activeBar={false}>
               {monthExpenseData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -295,7 +307,7 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
         </AnimatePresence>
       </div>
 
-      <div className="flex justify-center gap-1.5 pb-6">
+      <div className="flex justify-center gap-1.5 pb-2">
         {charts.map((_, i) => (
           <button
             key={i}
@@ -306,6 +318,28 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
           />
         ))}
       </div>
+
+      {/* Categorias e Porcentagens (Apenas no gráfico de barras) */}
+      {activeIndex === 0 && monthExpenseData.length > 0 && (
+        <div className="px-6 pb-6 space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
+          {monthExpenseData.map((item, i) => (
+            <div key={i} className="flex items-center justify-between group/item">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">{item.name}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-black text-slate-900 dark:text-white">
+                  {item.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </span>
+                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded">
+                  {item.percentage.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
