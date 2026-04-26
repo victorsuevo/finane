@@ -117,14 +117,14 @@ export default function App() {
   
   const monthGoals = goals.map(g => {
     const futureTransactionsAmount = transactions
-      .filter(t => t.goal_id === g.id && t.date > `${selectedMonth}-31`)
+      .filter(t => Number(t.goal_id) === Number(g.id) && t.date.substring(0, 7) > selectedMonth)
       .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
     return { ...g, current_amount: Math.max(0, g.current_amount - futureTransactionsAmount) };
   });
 
   const monthInvestments = investments.map(inv => {
     const futureTransactionsAmount = transactions
-      .filter(t => t.investment_id === inv.id && t.date > `${selectedMonth}-31`)
+      .filter(t => Number(t.investment_id) === Number(inv.id) && t.date.substring(0, 7) > selectedMonth)
       .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
     return { ...inv, current_amount: Math.max(0, inv.current_amount - futureTransactionsAmount) };
   });
