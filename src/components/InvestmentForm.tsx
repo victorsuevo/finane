@@ -144,6 +144,7 @@ export default function InvestmentForm({ onSuccess, onClose, editInvestment }: P
                 className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl py-4 pl-14 pr-6 text-xl font-black text-slate-900 dark:text-white placeholder:text-slate-200 focus:ring-2 focus:ring-indigo-100 transition-all"
               />
             </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data do Saldo</label>
