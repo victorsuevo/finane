@@ -163,6 +163,11 @@ export default function App() {
   });
 
   const totalInvestments = monthInvestments.reduce((acc, inv) => acc + (inv.current_amount || 0), 0);
+  
+  // New: Monthly Investment Contribution (like Entrada/Saída)
+  const monthInvestTotal = monthTransactions
+    .filter(t => t.investment_id != null || (t.type === 'expense' && investments.some(inv => inv.name.trim().toLowerCase() === t.category.trim().toLowerCase())))
+    .reduce((s, t) => s + t.amount, 0);
 
   if (authLoading) return null;
   if (!user) return <Login />;
@@ -236,24 +241,33 @@ export default function App() {
         </div>
 
         {/* Cards de Resumo Coloridos */}
-        <div className="px-5 grid grid-cols-2 gap-3">
+        <div className="px-5 grid grid-cols-3 gap-2">
           <motion.div 
             whileHover={{ scale: 1.02 }} 
             whileTap={{ scale: 0.98 }} 
             onClick={() => { setFormType('income'); setEditTx(null); setShowForm(true); }}
-            className="bg-emerald-50 dark:bg-emerald-950/30 p-4 rounded-[2rem] border border-emerald-100/50 dark:border-emerald-900/30 cursor-pointer shadow-sm hover:shadow-md transition-all"
+            className="bg-emerald-50 dark:bg-emerald-950/30 p-3 rounded-[1.5rem] border border-emerald-100/50 dark:border-emerald-900/30 cursor-pointer shadow-sm hover:shadow-md transition-all"
           >
-            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black uppercase mb-1 tracking-widest">Entradas</p>
-            <p className="text-xl font-black text-emerald-700 dark:text-emerald-300 tracking-tight">+ {formatCurrency(monthIncome)}</p>
+            <p className="text-[8px] text-emerald-600 dark:text-emerald-400 font-black uppercase mb-1 tracking-widest">Entradas</p>
+            <p className="text-sm font-black text-emerald-700 dark:text-emerald-300 tracking-tight">{formatCurrency(monthIncome)}</p>
           </motion.div>
           <motion.div 
             whileHover={{ scale: 1.02 }} 
             whileTap={{ scale: 0.98 }} 
             onClick={() => { setFormType('expense'); setEditTx(null); setShowForm(true); }}
-            className="bg-rose-50 dark:bg-rose-950/30 p-4 rounded-[2rem] border border-rose-100/50 dark:border-rose-900/30 cursor-pointer shadow-sm hover:shadow-md transition-all"
+            className="bg-rose-50 dark:bg-rose-950/30 p-3 rounded-[1.5rem] border border-rose-100/50 dark:border-rose-900/30 cursor-pointer shadow-sm hover:shadow-md transition-all"
           >
-            <p className="text-[10px] text-rose-600 dark:text-rose-400 font-black uppercase mb-1 tracking-widest">Saídas</p>
-            <p className="text-xl font-black text-rose-700 dark:text-rose-300 tracking-tight">- {formatCurrency(monthExpense)}</p>
+            <p className="text-[8px] text-rose-600 dark:text-rose-400 font-black uppercase mb-1 tracking-widest">Saídas</p>
+            <p className="text-sm font-black text-rose-700 dark:text-rose-300 tracking-tight">{formatCurrency(monthExpense)}</p>
+          </motion.div>
+          <motion.div 
+            whileHover={{ scale: 1.02 }} 
+            whileTap={{ scale: 0.98 }} 
+            onClick={() => { setEditInvest(null); setShowInvestForm(true); }}
+            className="bg-indigo-50 dark:bg-indigo-950/30 p-3 rounded-[1.5rem] border border-indigo-100/50 dark:border-indigo-900/30 cursor-pointer shadow-sm hover:shadow-md transition-all"
+          >
+            <p className="text-[8px] text-indigo-600 dark:text-indigo-400 font-black uppercase mb-1 tracking-widest">Investido</p>
+            <p className="text-sm font-black text-indigo-700 dark:text-indigo-300 tracking-tight">{formatCurrency(monthInvestTotal)}</p>
           </motion.div>
         </div>
 

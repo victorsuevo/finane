@@ -43,11 +43,7 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
       }, {} as Record<string, number>);
 
     return Object.entries(expenses)
-      .map(([name, value]) => ({ 
-        name, 
-        value,
-        percentage: totalIncome > 0 ? (value / totalIncome) * 100 : 0
-      }))
+      .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
   }, [transactions, currentMonth]);
 
@@ -137,11 +133,7 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
               contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', backgroundColor: 'rgba(15, 23, 42, 0.95)', color: '#fff' }}
               itemStyle={{ color: '#fff' }}
               labelStyle={{ color: '#fff' }}
-              formatter={(value: number, name: string, props: any) => {
-                const currency = value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                const percent = props.payload.percentage.toFixed(1);
-                return [`${currency} (${percent}%)`, 'Gasto'];
-              }}
+              formatter={(value: number) => [value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), 'Gasto']}
             />
             <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={12} activeBar={false}>
               {monthExpenseData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -331,9 +323,6 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
               <div className="flex items-center gap-3">
                 <span className="text-[10px] font-black text-slate-900 dark:text-white">
                   {item.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </span>
-                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded">
-                  {item.percentage.toFixed(1)}%
                 </span>
               </div>
             </div>
