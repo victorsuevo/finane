@@ -126,11 +126,6 @@ export default function TransactionList({ transactions, onDelete, onEdit, totalI
                   <h4 className="font-black text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest capitalize">
                     {label}
                   </h4>
-                  {groupBy === 'category' && totalIncome > 0 && total < 0 && (
-                    <span className="text-[9px] font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 px-1.5 py-0.5 rounded-full">
-                      {(Math.abs(total) / totalIncome * 100).toFixed(1)}%
-                    </span>
-                  )}
                 </div>
                 <span className={cn("text-[10px] font-black px-2 py-0.5 rounded-full", total >= 0 ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600" : "bg-rose-50 dark:bg-rose-950/30 text-rose-600")}>
                   {total >= 0 ? '+' : ''}{formatCurrency(total)}
@@ -172,9 +167,16 @@ export default function TransactionList({ transactions, onDelete, onEdit, totalI
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <p className={cn("font-bold text-sm tracking-tight whitespace-nowrap", t.type === 'income' ? 'text-emerald-600' : isGoalContrib ? 'text-indigo-600' : 'text-slate-900 dark:text-slate-200')}>
-                          {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
-                        </p>
+                        <div className="flex flex-col items-end gap-1">
+                          <span className={cn("text-xs font-black tracking-tighter", t.type === 'income' ? "text-emerald-600" : "text-rose-600")}>
+                            {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
+                          </span>
+                          {t.type === 'expense' && totalIncome > 0 && (
+                            <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-1 rounded">
+                              {((t.amount / totalIncome) * 100).toFixed(1)}%
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-1">
                           <button onClick={() => onDelete(t)} className="p-2 text-slate-300 dark:text-slate-500 hover:text-red-500 dark:hover:text-rose-400 transition-colors">
                             <Trash2 size={16} />
