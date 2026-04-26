@@ -8,16 +8,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface Props {
   transactions: Transaction[];
   goals?: Goal[];
+  userName?: string;
 }
 
-export default function AIInsights({ transactions, goals = [] }: Props) {
+export default function AIInsights({ transactions, goals = [], userName }: Props) {
   const [insight, setInsight] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const generate = async () => {
     setLoading(true);
-    const text = await getFinancialInsights(transactions, goals);
+    const text = await getFinancialInsights(transactions, goals, userName);
     setInsight(text || null);
     setLoading(false);
   };

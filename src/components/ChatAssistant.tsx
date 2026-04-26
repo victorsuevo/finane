@@ -19,12 +19,19 @@ interface Props {
 
 export default function ChatAssistant({ transactions, goals = [] }: Props) {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', text: 'Oi! Eu sou o assistente SUEVO. Como posso te ajudar com suas finanças hoje?' }
-  ]);
+  const { user, logout } = useAuth();
+  const [messages, setMessages] = useState<Message[]>([]);
+  
+  useEffect(() => {
+    if (user && messages.length === 0) {
+      setMessages([
+        { role: 'assistant', text: `Oi, ${user.name}! Eu sou o assistente SUEVO. Como posso te ajudar com suas finanças hoje?` }
+      ]);
+    }
+  }, [user]);
+
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const { logout } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,7 +49,7 @@ export default function ChatAssistant({ transactions, goals = [] }: Props) {
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setLoading(true);
 
-    const response = await chatWithAssistant(userMsg, transactions, goals);
+    const response = await chatWithAssistant(userMsg, transactions, goals, user?.name);
     
     if (typeof response === 'object' && 'error' in response) {
       const isExpired = response.error?.toLowerCase().includes("expira") || 

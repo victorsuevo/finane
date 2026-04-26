@@ -40,11 +40,6 @@ export default function ShareSummary({ summary, transactions, goals = [], userNa
     report += `👤 ${userName || 'Usuário'}\n`;
     report += `🗓️ ${dateStr}\n\n`;
 
-    report += `💼 *SALDO GERAL*\n`;
-    report += `Entrada: ${formatCurrency(summary.totalIncome || 0)}\n`;
-    report += `Saída:   ${formatCurrency(summary.totalExpense || 0)}\n`;
-    report += `✅ *Total: ${formatCurrency(balance)}*\n\n`;
-
     report += `📅 *${monthName.toUpperCase()}*\n`;
     report += `Entrada: ${formatCurrency(monthIncome)}\n`;
     report += `Saída:   ${formatCurrency(monthExpense)}\n`;

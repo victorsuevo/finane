@@ -112,7 +112,24 @@ export default function App() {
   const monthExpense = monthTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount || 0), 0);
   const monthBalance = monthIncome - monthExpense;
 
-  const totalInvestments = investments.reduce((acc, inv) => acc + (inv.current_amount || 0), 0);
+  // Calculate historical balances for goals and investments
+  const lastDayOfMonth = `${selectedMonth}-31`; // Simplified for comparison
+
+  const monthGoals = goals.map(g => {
+    const historicalAmount = transactions
+      .filter(t => t.goal_id === g.id && t.date <= lastDayOfMonth)
+      .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
+    return { ...g, current_amount: historicalAmount };
+  });
+
+  const monthInvestments = investments.map(inv => {
+    const historicalAmount = transactions
+      .filter(t => t.investment_id === inv.id && t.date <= lastDayOfMonth)
+      .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
+    return { ...inv, current_amount: historicalAmount };
+  });
+
+  const totalInvestments = monthInvestments.reduce((acc, inv) => acc + (inv.current_amount || 0), 0);
 
   if (authLoading) return null;
   if (!user) return <Login />;
@@ -208,13 +225,13 @@ export default function App() {
         </div>
 
         {/* Gráficos */}
-        <CategoryChart transactions={transactions} currentMonth={selectedMonth} investments={investments} />
+        <CategoryChart transactions={transactions} currentMonth={selectedMonth} investments={monthInvestments} />
 
         {/* Metas */}
-        <GoalList goals={goals} onAdd={() => { setEditGoal(null); setShowGoalForm(true); }} onRefresh={handleAfterAdd} onEdit={(g) => { setEditGoal(g); setShowGoalForm(true); }} />
+        <GoalList goals={monthGoals} onAdd={() => { setEditGoal(null); setShowGoalForm(true); }} onRefresh={handleAfterAdd} onEdit={(g) => { setEditGoal(g); setShowGoalForm(true); }} />
 
         {/* Investimentos */}
-        <InvestmentPortfolio investments={investments} onAdd={() => { setEditInvest(null); setShowInvestForm(true); }} onRefresh={handleAfterAdd} onEdit={(inv) => { setEditInvest(inv); setShowInvestForm(true); }} />
+        <InvestmentPortfolio investments={monthInvestments} onAdd={() => { setEditInvest(null); setShowInvestForm(true); }} onRefresh={handleAfterAdd} onEdit={(inv) => { setEditInvest(inv); setShowInvestForm(true); }} />
 
         {/* Compartilhar */}
         <ShareSummary 
@@ -224,12 +241,12 @@ export default function App() {
             totalExpense: transactions.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount || 0), 0)
           }} 
           transactions={monthTransactions} 
-          goals={goals} 
+          goals={monthGoals} 
           userName={user.name} 
         />
 
         {/* Insights IA */}
-        <AIInsights transactions={monthTransactions} goals={goals} />
+        <AIInsights transactions={monthTransactions} goals={monthGoals} userName={user.name} />
 
         {/* Lista de Transações */}
         <div className="space-y-4">
@@ -260,7 +277,7 @@ export default function App() {
         <Plus size={28} />
       </motion.button>
 
-      <ChatAssistant transactions={transactions} goals={goals} />
+      <ChatAssistant transactions={transactions} goals={monthGoals} />
 
       {/* Modais */}
       {showForm && (

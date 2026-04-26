@@ -1,6 +1,6 @@
 import { Transaction, Goal } from "../types";
 
-export async function getFinancialInsights(transactions: Transaction[], goals: Goal[] = []) {
+export async function getFinancialInsights(transactions: Transaction[], goals: Goal[] = [], userName?: string) {
   try {
     let token = localStorage.getItem("finane_token");
     if (!token) return "Você precisa estar logado para ver insights.";
@@ -12,7 +12,7 @@ export async function getFinancialInsights(transactions: Transaction[], goals: G
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ transactions, goals })
+      body: JSON.stringify({ transactions, goals, userName })
     });
     const data = await res.json();
     return data.text || "Não foi possível gerar insights agora.";
@@ -21,7 +21,7 @@ export async function getFinancialInsights(transactions: Transaction[], goals: G
   }
 }
 
-export async function chatWithAssistant(message: string, transactions: Transaction[], goals: Goal[] = []) {
+export async function chatWithAssistant(message: string, transactions: Transaction[], goals: Goal[] = [], userName?: string) {
   try {
     let token = localStorage.getItem("finane_token");
     if (!token) return { error: "Sessão expirada", details: "Token não encontrado no navegador." };
@@ -33,7 +33,7 @@ export async function chatWithAssistant(message: string, transactions: Transacti
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ message, transactions: transactions.slice(0, 30), goals })
+      body: JSON.stringify({ message, transactions: transactions.slice(0, 30), goals, userName })
     });
     const data = await res.json();
     if (!res.ok) return data;

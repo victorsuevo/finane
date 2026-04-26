@@ -12,7 +12,7 @@ interface Props {
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
-  'Alimentação': '🛒',
+  'Alimentação': '🍽️',
   'Transporte': '🚗',
   'Lazer': '🎬',
   'Saúde': '💊',
@@ -21,7 +21,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   'Salário': '💰',
   'Investimentos': '📈',
   'Meta': '🎯',
-  'Mercado': '🛍️',
+  'Mercado': '🛒',
   'Assinaturas': '📱',
   'Freelance': '💼',
   'Presente': '🎁',
@@ -141,7 +141,10 @@ export default function TransactionList({ transactions, onDelete, onEdit }: Prop
                           {isGoalContrib ? <Target size={18} className="text-indigo-500" /> : getCategoryIcon(t.category)}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-bold text-[13px] text-slate-900 dark:text-white leading-tight truncate max-w-[160px]">
+                          <p 
+                            title={t.description || t.category}
+                            className="font-bold text-[13px] text-slate-900 dark:text-white leading-tight truncate max-w-[160px]"
+                          >
                             {t.description || t.category}
                           </p>
                           <div className="flex items-center gap-1.5 flex-wrap">
