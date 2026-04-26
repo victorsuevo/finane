@@ -311,24 +311,6 @@ export default function CategoryChart({ transactions = [], currentMonth, investm
         ))}
       </div>
 
-      {/* Categorias e Porcentagens (Apenas no gráfico de barras) */}
-      {activeIndex === 0 && monthExpenseData.length > 0 && (
-        <div className="px-6 pb-6 space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
-          {monthExpenseData.map((item, i) => (
-            <div key={i} className="flex items-center justify-between group/item">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">{item.name}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] font-black text-slate-900 dark:text-white">
-                  {item.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

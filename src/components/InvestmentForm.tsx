@@ -23,6 +23,8 @@ export default function InvestmentForm({ onSuccess, onClose, editInvestment }: P
   const [name, setName] = useState('');
   const [type, setType] = useState('renda_fixa');
   const [amount, setAmount] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isAporte, setIsAporte] = useState(true);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -51,7 +53,9 @@ export default function InvestmentForm({ onSuccess, onClose, editInvestment }: P
         body: JSON.stringify({
           name,
           type,
-          current_amount: parseFloat(amount)
+          current_amount: parseFloat(amount),
+          date,
+          isAporte
         })
       });
 
@@ -139,6 +143,34 @@ export default function InvestmentForm({ onSuccess, onClose, editInvestment }: P
                 onChange={(e) => setAmount(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl py-4 pl-14 pr-6 text-xl font-black text-slate-900 dark:text-white placeholder:text-slate-200 focus:ring-2 focus:ring-indigo-100 transition-all"
               />
+            </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data do Saldo</label>
+              <input
+                required
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-900 border-none rounded-2xl py-4 px-6 text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-100 transition-all"
+              />
+            </div>
+            <div className="space-y-2 flex flex-col justify-end">
+              <button
+                type="button"
+                onClick={() => setIsAporte(!isAporte)}
+                className={cn(
+                  "flex items-center gap-2 p-4 rounded-2xl border-2 transition-all h-[58px]",
+                  isAporte 
+                    ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30" 
+                    : "border-slate-100 dark:border-slate-700"
+                )}
+              >
+                <div className={cn("w-4 h-4 rounded border-2 flex items-center justify-center transition-all", isAporte ? "bg-emerald-500 border-emerald-500" : "border-slate-300")}>
+                  {isAporte && <Save size={10} className="text-white" />}
+                </div>
+                <span className="text-[9px] font-black uppercase tracking-tight text-slate-600 dark:text-slate-300">Lançar Aporte</span>
+              </button>
             </div>
           </div>
 

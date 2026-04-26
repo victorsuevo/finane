@@ -244,15 +244,46 @@ async function startServer() {
   });
 
   app.post("/api/investments", authenticateToken, async (req: any, res) => {
-    const { name, type, current_amount } = req.body;
+    const { name, type, current_amount, date, isAporte } = req.body;
     try {
-      await query(
+      const info = await query(
         "INSERT INTO investments (user_id, name, type, current_amount) VALUES (?, ?, ?, ?)",
         [req.user.id, name, type, current_amount || 0]
       );
-      res.json({ success: true });
+      const investId = info.lastInsertRowid;
+
+      if (isAporte && current_amount > 0 && investId) {
+        await query(
+          "INSERT INTO transactions (user_id, amount, category, description, date, type, investment_id) VALUES (?, ?, ?, ?, ?, 'expense', ?)",
+          [req.user.id, current_amount, name, "Saldo Inicial / Aporte", date || new Date().toISOString().split('T')[0], investId]
+        );
+      }
+      res.json({ success: true, id: investId });
     } catch (error) {
       res.status(500).json({ error: "Erro ao criar investimento" });
+    }
+  });
+
+  app.put("/api/investments/:id", authenticateToken, async (req: any, res) => {
+    const { name, type, current_amount, date, isAporte } = req.body;
+    try {
+      // 1. Get old amount to calculate difference if needed? No, let's follow user's "Lançar Aporte" literally.
+      // If isAporte is true, we create a transaction of the FULL amount provided?
+      // Actually, if they are UPDATING, and they check "Lançar Aporte", it means they want to add a NEW transaction of that amount.
+      await query(
+        "UPDATE investments SET name = ?, type = ?, current_amount = ? WHERE id = ? AND user_id = ?",
+        [name, type, current_amount, req.params.id, req.user.id]
+      );
+
+      if (isAporte && current_amount > 0) {
+        await query(
+          "INSERT INTO transactions (user_id, amount, category, description, date, type, investment_id) VALUES (?, ?, ?, ?, ?, 'expense', ?)",
+          [req.user.id, current_amount, name, "Aporte / Atualização", date || new Date().toISOString().split('T')[0], req.params.id]
+        );
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao atualizar investimento" });
     }
   });
 
