@@ -8,7 +8,7 @@ interface Props {
 }
 
 export default function SettingsPanel({ onClose }: Props) {
-  const { user, token } = useAuth();
+  const { user, token, updateUser } = useAuth();
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('finane_theme') === 'dark');
   const [currency, setCurrency] = useState(() => localStorage.getItem('app_currency') || 'BRL');
   const [name, setName] = useState(user?.name || '');
@@ -37,7 +37,7 @@ export default function SettingsPanel({ onClose }: Props) {
 
       if (name !== user?.name) {
         // Need a profile update endpoint or just update local if no endpoint
-        await fetch(`/api/users/profile`, {
+        const res = await fetch(`/api/users/profile`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -45,9 +45,13 @@ export default function SettingsPanel({ onClose }: Props) {
           },
           body: JSON.stringify({ name })
         });
+        
+        if (res.ok && user) {
+          updateUser({ ...user, name });
+        }
       }
 
-      window.location.reload(); // Reload to apply currency format everywhere and fetch new user token if needed
+      window.location.reload(); // Reload to apply currency format everywhere
     } catch (e) {
       console.error(e);
     } finally {
