@@ -26,7 +26,8 @@ const CATEGORY_ICONS: Record<string, string> = {
   'Assinaturas': '📱',
   'Freelance': '💼',
   'Presente': '🎁',
-  'Venda': '🏷️',
+  'Venda': '🛍️',
+  'Outros': '✨',
   'Despesas Pessoais': '👔',
   'Seguros': '🛡️',
 };
@@ -146,7 +147,7 @@ export default function TransactionList({ transactions, onDelete, onEdit, totalI
                     <div key={t.id} className="group flex items-center justify-between p-3 bg-white dark:bg-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-900/50 rounded-2xl transition-all border border-slate-50 dark:border-slate-800">
                       <div className="flex items-center gap-3">
                         <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0", isGoalContrib ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600' : t.type === 'income' ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'bg-slate-100 dark:bg-slate-900/50')}>
-                          {isGoalContrib ? <Target size={18} className="text-indigo-500" /> : t.type === 'income' ? '💰' : getCategoryIcon(t.category)}
+                          {isGoalContrib ? <Target size={18} className="text-indigo-500" /> : getCategoryIcon(t.category)}
                         </div>
                         <div className="min-w-0 relative group/desc">
                           <p 
