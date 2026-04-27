@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, Wallet, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { getApiUrl } from '../lib/api';
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -21,7 +22,7 @@ export default function Login() {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
       const body = isLogin ? { email, password } : { name, email, password };
 
-      const res = await fetch(endpoint, {
+      const res = await fetch(getApiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

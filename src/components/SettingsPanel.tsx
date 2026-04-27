@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Moon, Sun, DollarSign, User, Save } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { getApiUrl } from '../lib/api';
 
 interface Props {
   onClose: () => void;
@@ -39,7 +40,7 @@ export default function SettingsPanel({ onClose }: Props) {
 
       if (name !== user?.name) {
         // Need a profile update endpoint or just update local if no endpoint
-        const res = await fetch(`/api/users/profile`, {
+        const res = await fetch(getApiUrl(`/api/users/profile`), {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

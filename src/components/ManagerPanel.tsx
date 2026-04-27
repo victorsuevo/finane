@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { getApiUrl } from '../lib/api';
 
 interface UserRecord {
   id: number;
@@ -34,8 +35,8 @@ export default function ManagerPanel({ onClose }: { onClose: () => void }) {
     setLoading(true);
     try {
       const [uRes, sRes] = await Promise.all([
-        fetch('/api/manager/users', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/manager/stats', { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(getApiUrl('/api/manager/users'), { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(getApiUrl('/api/manager/stats'), { headers: { 'Authorization': `Bearer ${token}` } }),
       ]);
       setUsers(await uRes.json());
       setStats(await sRes.json());
@@ -49,7 +50,7 @@ export default function ManagerPanel({ onClose }: { onClose: () => void }) {
   useEffect(() => { fetchData(); }, []);
 
   const handlePromote = async (id: number, promote: boolean) => {
-    await fetch(`/api/manager/users/${id}/promote`, {
+    await fetch(getApiUrl(`/api/manager/users/${id}/promote`), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ is_manager: promote }),
@@ -66,7 +67,7 @@ export default function ManagerPanel({ onClose }: { onClose: () => void }) {
     if (!editingUser) return;
     setSaving(true);
     try {
-      await fetch(`/api/manager/users/${editingUser.id}/maintenance`, {
+      await fetch(getApiUrl(`/api/manager/users/${editingUser.id}/maintenance`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(editForm),
@@ -82,7 +83,7 @@ export default function ManagerPanel({ onClose }: { onClose: () => void }) {
 
   const handleDelete = async (id: number, name: string) => {
     if (!confirm(`Deletar usuário "${name}" e todos os seus dados?`)) return;
-    await fetch(`/api/manager/users/${id}`, {
+    await fetch(getApiUrl(`/api/manager/users/${id}`), {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` },
     });
