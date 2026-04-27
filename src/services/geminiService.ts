@@ -27,8 +27,7 @@ export async function chatWithAssistant(
   history: { role: 'assistant' | 'user', text: string }[],
   transactions: Transaction[], 
   goals: Goal[] = [], 
-  userName?: string,
-  file?: { data: string, mimeType: string }
+  userName?: string
 ) {
   try {
     let token = localStorage.getItem("finane_token");
@@ -41,7 +40,7 @@ export async function chatWithAssistant(
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ message, history, transactions: transactions.slice(0, 30), goals, userName, file })
+      body: JSON.stringify({ message, history, transactions: transactions.slice(0, 30), goals, userName })
     });
     const data = await res.json();
     if (!res.ok) return data;

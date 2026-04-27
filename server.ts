@@ -737,8 +737,7 @@ async function startServer() {
 
   async function callAI(
     systemInstruction: string, 
-    history: { role: string, parts: any[] }[],
-    file?: { data: string, mimeType: string }
+    history: { role: string, parts: any[] }[]
   ): Promise<string> {
     let geminiError = null;
 
@@ -751,19 +750,6 @@ async function startServer() {
           role: h.role,
           parts: [...h.parts]
         }));
-        
-        if (file && contents.length > 0) {
-          const lastMsg = contents[contents.length - 1];
-          if (lastMsg.role === 'user') {
-            // Put the image FIRST in parts for better focus
-            lastMsg.parts.unshift({
-              inline_data: {
-                mime_type: file.mimeType,
-                data: file.data
-              }
-            });
-          }
-        }
 
         const response = await fetch(url, {
           method: 'POST',
@@ -839,7 +825,7 @@ async function startServer() {
   }
 
   app.post("/api/ai/chat", authenticateToken, async (req: any, res) => {
-    const { message, history = [], transactions, goals = [], userName, file } = req.body;
+    const { message, history = [], transactions, goals = [], userName } = req.body;
     try {
       const goalsContext = goals.length > 0 ? `Metas do usuário (trate transações nestas categorias como investimentos/poupança, não como gastos negativos): ${JSON.stringify(goals)}` : '';
       
@@ -900,10 +886,10 @@ async function startServer() {
       // Add the NEW message to the history
       formattedHistory.push({
         role: 'user',
-        parts: [{ text: message || (file ? "Analise este arquivo." : "") }]
+        parts: [{ text: message || "" }]
       });
 
-      const text = await callAI(systemInstruction, formattedHistory, file);
+      const text = await callAI(systemInstruction, formattedHistory);
       res.json({ text });
     } catch (error: any) {
       res.status(500).json({ error: "Erro na IA", details: error.message });

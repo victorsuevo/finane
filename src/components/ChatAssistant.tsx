@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, Bot, User, Loader2, Paperclip, FileText, Image as ImageIcon, Check } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, Loader2, Check } from 'lucide-react';
 import { Transaction, Goal } from '../types';
 import { chatWithAssistant } from '../services/geminiService';
 import { cn } from '../lib/utils';
@@ -35,8 +35,6 @@ export default function ChatAssistant({ transactions, goals = [], onRefresh }: P
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<{ data: string, mimeType: string, name: string } | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -47,18 +45,15 @@ export default function ChatAssistant({ transactions, goals = [], onRefresh }: P
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!input.trim() && !selectedFile) || loading) return;
+    if (!input.trim() || loading) return;
 
     const userMsg = input.trim();
-    const currentFile = selectedFile;
     
     setInput('');
-    setSelectedFile(null);
-    setMessages(prev => [...prev, { role: 'user', text: userMsg || (currentFile ? `[Arquivo: ${currentFile.name}]` : '') }]);
+    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setLoading(true);
 
-    const fileToSend = currentFile ? { data: currentFile.data, mimeType: currentFile.mimeType } : undefined;
-    const response = await chatWithAssistant(userMsg || "Analise este arquivo", messages, transactions, goals, user?.name, fileToSend);
+    const response = await chatWithAssistant(userMsg, messages, transactions, goals, user?.name);
     
     if (typeof response === 'object' && 'error' in response) {
       // ... erro handling ...
@@ -154,24 +149,6 @@ export default function ChatAssistant({ transactions, goals = [], onRefresh }: P
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = (reader.result as string).split(',')[1];
-      setSelectedFile({
-        data: base64String,
-        mimeType: file.type,
-        name: file.name
-      });
-      // Reseta o valor do input para permitir selecionar o mesmo arquivo novamente
-      if (e.target) e.target.value = '';
-    };
-    reader.readAsDataURL(file);
-  };
-
   return (
     <>
       {/* Trigger Button */}
@@ -263,50 +240,17 @@ export default function ChatAssistant({ transactions, goals = [], onRefresh }: P
             </div>
 
             {/* Input Area */}
-            <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 space-y-2">
-              {selectedFile && (
-                <div className="flex items-center gap-2 p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl border border-indigo-100 dark:border-indigo-800 animate-in fade-in slide-in-from-bottom-2">
-                  <div className="w-8 h-8 bg-indigo-600 text-white rounded-lg flex items-center justify-center">
-                    {selectedFile.mimeType.startsWith('image/') ? <ImageIcon size={14} /> : <FileText size={14} />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold text-indigo-900 dark:text-indigo-200 truncate">{selectedFile.name}</p>
-                    <p className="text-[8px] text-indigo-400 dark:text-indigo-400 uppercase tracking-widest">{selectedFile.mimeType}</p>
-                  </div>
-                  <button 
-                    onClick={() => setSelectedFile(null)}
-                    className="p-1 hover:bg-indigo-200 dark:hover:bg-indigo-800 rounded-lg text-indigo-600 dark:text-indigo-400"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              )}
-              
+            <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
               <form onSubmit={handleSend} className="flex gap-2">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/*,application/pdf"
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-10 h-10 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                >
-                  <Paperclip size={18} />
-                </button>
-                
                 <input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Pergunte ou envie um arquivo..."
+                  placeholder="Pergunte ao SUEVO..."
                   className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl px-4 py-2 text-xs font-bold border-none focus:ring-2 focus:ring-indigo-500 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 />
                 <button
                   type="submit"
-                  disabled={(!input.trim() && !selectedFile) || loading}
+                  disabled={!input.trim() || loading}
                   className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center transition-opacity disabled:opacity-50"
                 >
                   <Send size={18} />
