@@ -148,13 +148,20 @@ export default function TransactionList({ transactions, onDelete, onEdit, totalI
                         <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0", isGoalContrib ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600' : t.type === 'income' ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'bg-slate-100 dark:bg-slate-900/50')}>
                           {isGoalContrib ? <Target size={18} className="text-indigo-500" /> : getCategoryIcon(t.category)}
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 relative group/desc">
                           <p 
-                            title={t.description || t.category}
                             className="font-bold text-[13px] text-slate-900 dark:text-white leading-tight truncate max-w-[160px]"
                           >
                             {(t.description || t.category).replace(/\s*\(\d+\/\d+\)\s*$/, '')}
                           </p>
+                          {(t.description || t.category).length > 20 && (
+                            <div className="absolute bottom-full left-0 mb-2 hidden group-hover/desc:block z-50 pointer-events-none">
+                              <div className="bg-slate-900 dark:bg-slate-800 text-white text-[10px] font-medium py-1.5 px-3 rounded-lg shadow-xl border border-slate-700/50 whitespace-nowrap">
+                                {t.description || t.category}
+                              </div>
+                              <div className="w-2 h-2 bg-slate-900 dark:bg-slate-800 border-b border-r border-slate-700/50 rotate-45 -mt-1 ml-4" />
+                            </div>
+                          )}
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="text-[10px] text-slate-400 font-medium tracking-tight">
                               {format(parseISO(t.date), "dd 'de' MMM", { locale: ptBR })}

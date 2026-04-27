@@ -104,7 +104,17 @@ export default function HistoryModal({ isOpen, onClose, transactions, onNavigate
                         {t.type === 'income' ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
                       </div>
                       <div>
+                      <div className="relative group/desc">
                         <p className="text-xs font-black text-slate-900 dark:text-white truncate max-w-[200px]">{t.description}</p>
+                        {t.description.length > 25 && (
+                          <div className="absolute bottom-full left-0 mb-2 hidden group-hover/desc:block z-[210] pointer-events-none">
+                            <div className="bg-slate-900 dark:bg-slate-800 text-white text-[10px] font-medium py-1.5 px-3 rounded-lg shadow-xl border border-slate-700/50 whitespace-nowrap">
+                              {t.description}
+                            </div>
+                            <div className="w-2 h-2 bg-slate-900 dark:bg-slate-800 border-b border-r border-slate-700/50 rotate-45 -mt-1 ml-4" />
+                          </div>
+                        )}
+                      </div>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{t.category}</span>
                           <span className="text-[9px] text-slate-300">•</span>

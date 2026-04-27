@@ -21,7 +21,14 @@ export async function getFinancialInsights(transactions: Transaction[], goals: G
   }
 }
 
-export async function chatWithAssistant(message: string, transactions: Transaction[], goals: Goal[] = [], userName?: string) {
+export async function chatWithAssistant(
+  message: string, 
+  history: { role: 'assistant' | 'user', text: string }[],
+  transactions: Transaction[], 
+  goals: Goal[] = [], 
+  userName?: string,
+  file?: { data: string, mimeType: string }
+) {
   try {
     let token = localStorage.getItem("finane_token");
     if (!token) return { error: "Sessão expirada", details: "Token não encontrado no navegador." };
@@ -33,7 +40,7 @@ export async function chatWithAssistant(message: string, transactions: Transacti
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ message, transactions: transactions.slice(0, 30), goals, userName })
+      body: JSON.stringify({ message, history, transactions: transactions.slice(0, 30), goals, userName, file })
     });
     const data = await res.json();
     if (!res.ok) return data;

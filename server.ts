@@ -150,7 +150,7 @@ async function startServer() {
   const app = express();
   const PORT = parseInt(process.env.PORT || "3000");
 
-  app.use(express.json({ limit: '10mb' }));
+  app.use(express.json({ limit: '50mb' }));
 
   // Auth Middleware
   const authenticateToken = (req: any, res: any, next: any) => {
@@ -733,39 +733,79 @@ async function startServer() {
   const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || "").trim();
   const GROQ_API_KEY = (process.env.GROQ_API_KEY || "").trim();
 
-  async function callAI(prompt: string): Promise<string> {
+  async function callAI(
+    systemInstruction: string, 
+    history: { role: string, parts: any[] }[],
+    file?: { data: string, mimeType: string }
+  ): Promise<string> {
     let geminiError = null;
 
     // 1. Try Gemini first
     if (GEMINI_API_KEY) {
       try {
-        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        
+        const contents = history.map(h => ({
+          role: h.role,
+          parts: [...h.parts]
+        }));
+        
+        if (file && contents.length > 0) {
+          const lastMsg = contents[contents.length - 1];
+          if (lastMsg.role === 'user') {
+            // Put the image FIRST in parts for better focus
+            lastMsg.parts.unshift({
+              inline_data: {
+                mime_type: file.mimeType,
+                data: file.data
+              }
+            });
+          }
+        }
+
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          body: JSON.stringify({ 
+            system_instruction: { parts: [{ text: systemInstruction }] },
+            contents 
+          })
         });
         const data = await response.json();
         if (response.ok) {
           return data.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não entendi.";
         }
+        
+        console.error("[AI] Erro na API do Gemini:", JSON.stringify(data.error));
+        
         if (response.status === 429 || (data.error && data.error.message.includes('Quota exceeded'))) {
-          geminiError = "Quota exceeded";
+          geminiError = "Quota excedida (Gemini).";
         } else {
           geminiError = data.error?.message || "Erro na API do Google";
         }
       } catch (err: any) {
+        console.error("[AI] Falha na requisição Gemini:", err.message);
         geminiError = err.message;
       }
     } else {
       geminiError = "GEMINI_API_KEY não configurada";
     }
 
-    // 2. Fallback to Groq
+    // 2. Fallback to Groq (Text only fallback)
     if (GROQ_API_KEY) {
       try {
         console.log(`[AI] Gemini falhou (${geminiError}). Tentando Groq Fallback...`);
         const url = "https://api.groq.com/openai/v1/chat/completions";
+        
+        // For Groq/OpenAI, we merge system and history
+        const messages = [
+          { role: "system", content: systemInstruction },
+          ...history.map(h => ({
+            role: h.role === 'model' ? 'assistant' : h.role,
+            content: h.parts.map(p => p.text).join('\n')
+          }))
+        ];
+
         const response = await fetch(url, {
           method: 'POST',
           headers: { 
@@ -773,8 +813,8 @@ async function startServer() {
             'Authorization': `Bearer ${GROQ_API_KEY}`
           },
           body: JSON.stringify({
-            model: "llama-3.1-8b-instant", // Recommended fallback model
-            messages: [{ role: "user", content: prompt }]
+            model: "llama-3.1-8b-instant",
+            messages
           })
         });
         const data = await response.json();
@@ -797,10 +837,11 @@ async function startServer() {
   }
 
   app.post("/api/ai/chat", authenticateToken, async (req: any, res) => {
-    const { message, transactions, goals = [], userName } = req.body;
+    const { message, history = [], transactions, goals = [], userName, file } = req.body;
     try {
       const goalsContext = goals.length > 0 ? `Metas do usuário (trate transações nestas categorias como investimentos/poupança, não como gastos negativos): ${JSON.stringify(goals)}` : '';
-      const prompt = `
+      
+      const systemInstruction = `
         Você é o "SUEVO", um assistente financeiro pessoal inteligente em português.
         Nome do usuário: ${userName || 'Usuário'}
         
@@ -810,11 +851,37 @@ async function startServer() {
         3. Fale 100% em PORTUGUÊS. Não use termos em inglês como "reached", "budget", etc.
         4. Use termos financeiros corretos em português (ex: use "despesa" ou "gasto", jamais palavras inventadas como "expensão").
         
-        Contexto do Usuário (últimas transações): ${JSON.stringify(transactions.slice(0, 30))}
+        CONTEXTO FINANCEIRO DO USUÁRIO:
+        Últimas 30 transações: ${JSON.stringify(transactions.slice(0, 30))}
         ${goalsContext}
-        Pergunta do usuário: ${message}
+
+        CAPACIDADES DE VISÃO (URGENTE):
+        Você é um modelo MULTIMODAL de última geração. 
+        IMPORTANTE: O texto acima (Últimas transações) é apenas para CONTEXTO FINANCEIRO. 
+        A IMAGEM anexada NÃO é a lista de transações. A imagem é um ARQUIVO EXTERNO (ex: um produto de loja, um extrato, uma nota).
+        
+        SE HOUVER UMA IMAGEM:
+        1. Analise o que está FISICAMENTE na imagem (cores, texto, preços, produtos).
+        2. Se for um produto de loja (ex: Shopee, Amazon), identifique o NOME do produto e o PREÇO.
+        3. Após identificar o produto na imagem, use o CONTEXTO FINANCEIRO (transações) para dizer se o usuário pode ou não comprar aquilo.
+        4. JAMAIS confunda a imagem com a lista de transações em texto.
+        5. Se você não conseguir ver a imagem, admita que houve um erro técnico, mas NÃO invente que a imagem é uma lista de transações.
       `;
-      const text = await callAI(prompt);
+
+      // Transform frontend history to Gemini format
+      // Note: we only take the last 10 messages for context window efficiency
+      const formattedHistory = history.slice(-10).map((m: any) => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.text }]
+      }));
+
+      // Add the NEW message to the history
+      formattedHistory.push({
+        role: 'user',
+        parts: [{ text: message || (file ? "Analise este arquivo." : "") }]
+      });
+
+      const text = await callAI(systemInstruction, formattedHistory, file);
       res.json({ text });
     } catch (error: any) {
       res.status(500).json({ error: "Erro na IA", details: error.message });
