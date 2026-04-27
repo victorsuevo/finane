@@ -25,6 +25,7 @@
     "@vitejs/plugin-react": "^5.0.4",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.9.0",
+    "capacitor-native-biometric": "^4.2.2",
     "capacitor-notifications-listener": "^0.5.1",
     "clsx": "^2.1.1",
     "cors": "^2.8.6",
