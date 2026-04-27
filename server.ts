@@ -872,8 +872,15 @@ async function startServer() {
         - Extrair: Valor Total, Estabelecimento, Número de Parcelas (se houver) e sugerir uma Categoria.
         - Responder: "Detectei uma nova despesa: R$ 50,00 no Posto Ipiranga (Transporte) em 10x. Deseja registrar?"
         - REGRA TÉCNICA: Se detectar uma transação, você DEVE acrescentar no final da sua resposta o marcador: 
-          [TRANSACTION_DATA:{"amount":50.00,"description":"Posto Ipiranga","category":"Transporte","type":"expense","installments":10}]
+          [TRANSACTION_DATA:{"amount":50.00,"description":"Posto Ipiranga","category":"Transporte","type":"expense","installments":10,"is_refund":false}]
           (Substitua os valores pelos dados reais. Se não houver parcelas, use "installments":1).
+
+        ESTORNOS E CANCELAMENTOS:
+        Se a notificação for de estorno, devolução ou cancelamento (ex: "Estorno de R$ 50,00 aprovado", "Compra cancelada na Loja X"):
+        - Extrair: Valor e o Estabelecimento.
+        - Responder: "Recebi o aviso de estorno de R$ 50,00 na Loja X. Vou cancelar o registro desse gasto para você."
+        - REGRA TÉCNICA: Use o marcador com "is_refund": true e type "expense":
+          [TRANSACTION_DATA:{"amount":50.00,"description":"Loja X","category":"Estorno","type":"expense","installments":1,"is_refund":true}]
 
         IMPORTANTE: Use o contexto das últimas 30 transações para calcular as médias de cada categoria antes de dar um insight.
       `;

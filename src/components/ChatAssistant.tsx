@@ -106,6 +106,33 @@ export default function ChatAssistant({ transactions, goals = [], onRefresh }: P
   const handleConfirmTransaction = async (data: any, msgIndex: number) => {
     try {
       const token = localStorage.getItem("finane_token")?.replace(/^"(.*)"$/, '$1');
+      
+      if (data.is_refund) {
+        // Lógica de Estorno via Chat
+        const resList = await fetch(getApiUrl("/api/transactions"), {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const transactions = await resList.json();
+        const target = transactions.find((t: any) => 
+          t.amount === data.amount && 
+          t.type === 'expense' &&
+          (t.description.toLowerCase().includes(data.description.toLowerCase()) || 
+           data.description.toLowerCase().includes(t.description.toLowerCase()))
+        );
+
+        if (target) {
+          await fetch(getApiUrl(`/api/transactions/${target.id}`), {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          setMessages(prev => prev.map((m, i) => i === msgIndex ? { ...m, transactionData: null, text: m.text + "\n\n✅ **Estorno realizado: Gasto original removido!**" } : m));
+          if (onRefresh) onRefresh();
+        } else {
+          setMessages(prev => prev.map((m, i) => i === msgIndex ? { ...m, transactionData: null, text: m.text + "\n\n❌ **Nenhuma transação correspondente encontrada para estornar.**" } : m));
+        }
+        return;
+      }
+
       const res = await fetch(getApiUrl("/api/transactions"), {
         method: "POST",
         headers: {
@@ -119,12 +146,11 @@ export default function ChatAssistant({ transactions, goals = [], onRefresh }: P
       });
 
       if (res.ok) {
-        // Remover o botão após confirmar
         setMessages(prev => prev.map((m, i) => i === msgIndex ? { ...m, transactionData: null, text: m.text + "\n\n✅ **Lançamento registrado com sucesso!**" } : m));
         if (onRefresh) onRefresh();
       }
     } catch (error) {
-      console.error("Erro ao registrar:", error);
+      console.error("Erro ao processar:", error);
     }
   };
 

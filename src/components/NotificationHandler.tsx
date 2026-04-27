@@ -25,7 +25,7 @@ export default function NotificationHandler({ onRefresh }: { onRefresh: () => vo
           const title = notification.title || "";
           
           // Filtro básico para não gastar API com bobagem
-          const bankKeywords = ['compra', 'aprovada', 'pagamento', 'transferência', 'pix', 'recebido'];
+          const bankKeywords = ['compra', 'aprovada', 'pagamento', 'transferência', 'pix', 'recebido', 'estorno', 'cancelada', 'estornado', 'devolvido'];
           const fullText = (title + " " + text).toLowerCase();
           
           const isBank = bankKeywords.some(key => fullText.includes(key));
@@ -50,21 +50,52 @@ export default function NotificationHandler({ onRefresh }: { onRefresh: () => vo
               if (match && match[1] && isAuto) {
                 const txData = JSON.parse(match[1]);
                 
-                // Registro Automático
-                await fetch(getApiUrl("/api/transactions"), {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${token}`
-                  },
-                  body: JSON.stringify({
-                    ...txData,
-                    date: new Date().toISOString().split('T')[0]
-                  })
-                });
-                
-                console.log('Gasto da notificação registrado automaticamente!');
-                onRefresh(); // Atualiza o painel principal
+                if (txData.is_refund) {
+                  // Lógica de Cancelamento: Busca e Deleta
+                  console.log('Buscando transação para estornar:', txData.amount, txData.description);
+                  
+                  // 1. Pegar transações recentes
+                  const res = await fetch(getApiUrl("/api/transactions"), {
+                    headers: { "Authorization": `Bearer ${token}` }
+                  });
+                  const transactions = await res.json();
+                  
+                  // 2. Encontrar o par perfeito (mesmo valor e descrição parecida)
+                  const target = transactions.find((t: any) => 
+                    t.amount === txData.amount && 
+                    t.type === 'expense' &&
+                    (t.description.toLowerCase().includes(txData.description.toLowerCase()) || 
+                     txData.description.toLowerCase().includes(t.description.toLowerCase()))
+                  );
+
+                  if (target) {
+                    console.log('Transação encontrada! Deletando ID:', target.id);
+                    await fetch(getApiUrl(`/api/transactions/${target.id}`), {
+                      method: "DELETE",
+                      headers: { "Authorization": `Bearer ${token}` }
+                    });
+                    console.log('Gasto estornado com sucesso!');
+                    onRefresh();
+                  } else {
+                    console.log('Nenhuma transação correspondente encontrada para o estorno.');
+                  }
+                } else {
+                  // Registro Automático Normal
+                  await fetch(getApiUrl("/api/transactions"), {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                      ...txData,
+                      date: new Date().toISOString().split('T')[0]
+                    })
+                  });
+                  
+                  console.log('Gasto da notificação registrado automaticamente!');
+                  onRefresh();
+                }
               }
             }
           }
