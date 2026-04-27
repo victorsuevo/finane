@@ -14,3 +14,23 @@ export function formatCurrency(value: number) {
     currency: currency,
   }).format(convertedValue);
 }
+
+/**
+ * Calcula Juros Simples
+ * @param p Principal (valor inicial)
+ * @param i Taxa de juros (em porcentagem, ex: 5 para 5%)
+ * @param t Tempo (em períodos)
+ */
+export function calculateSimpleInterest(p: number, i: number, t: number) {
+  return p * (i / 100) * t;
+}
+
+/**
+ * Calcula o Retorno sobre Investimento (ROI)
+ * @param initial Investimento inicial
+ * @param current Valor atual/final
+ */
+export function calculateROI(initial: number, current: number) {
+  if (initial === 0) return 0;
+  return ((current - initial) / initial) * 100;
+}

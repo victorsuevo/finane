@@ -22,6 +22,7 @@ let db_pg: any;
 console.log("🔍 Verificando variáveis de ambiente...");
 console.log("- DATABASE_URL:", DATABASE_URL ? "Definida (oculta)" : "NÃO DEFINIDA");
 console.log("- GEMINI_API_KEY:", process.env.GEMINI_API_KEY ? "Definida" : "NÃO DEFINIDA");
+console.log("- JWT_SECRET:", JWT_SECRET === "fallback-secret-stable-123" ? "Usando Fallback" : "Definida via ENV");
 
 if (DATABASE_URL) {
   console.log("🌐 DATABASE_URL detectada. Tentando conectar ao PostgreSQL...");
@@ -147,8 +148,10 @@ async function setupTables() {
   }
 }
 
-async function startServer() {
-  const app = express();
+const app = express();
+export { app };
+
+export async function startServer() {
   app.use(cors()); // Permitir conexões externas (App/Celular)
   const PORT = parseInt(process.env.PORT || "3000");
 
@@ -161,11 +164,11 @@ async function startServer() {
     if (!token) return res.status(401).json({ error: "Não autorizado" });
     jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
       if (err) {
+        console.error(`[AUTH] Falha na verificação do token: ${err.message}`);
         const message = err.name === 'TokenExpiredError' ? "Sessão expirada" : "Token inválido ou expirado";
         return res.status(403).json({ error: message });
       }
       req.user = user;
-      console.log(`[AUTH] Request by: ${user.email} (ID: ${user.id})`);
       next();
     });
   };
@@ -599,6 +602,27 @@ async function startServer() {
     }
   });
 
+  app.delete("/api/transactions", authenticateToken, async (req: any, res) => {
+    try {
+      // Find all transactions to revert goals and investments first
+      const { rows } = await query("SELECT * FROM transactions WHERE user_id = ?", [req.user.id]);
+      
+      for (const item of rows) {
+        if (item.goal_id && item.type === 'expense') {
+          await query("UPDATE goals SET current_amount = CASE WHEN current_amount - ? < 0 THEN 0 ELSE current_amount - ? END WHERE id = ? AND user_id = ?", [item.amount, item.amount, item.goal_id, req.user.id]);
+        }
+        if (item.investment_id && item.type === 'expense') {
+          await query("UPDATE investments SET current_amount = CASE WHEN current_amount - ? < 0 THEN 0 ELSE current_amount - ? END WHERE id = ? AND user_id = ?", [item.amount, item.amount, item.investment_id, req.user.id]);
+        }
+      }
+
+      await query("DELETE FROM transactions WHERE user_id = ?", [req.user.id]);
+      res.json({ success: true, message: "Todas as transações foram removidas." });
+    } catch (error) {
+      res.status(500).json({ error: "Erro ao deletar todas as transações" });
+    }
+  });
+
   // --- Goals Routes ---
   app.get("/api/goals", authenticateToken, async (req: any, res) => {
     try {
@@ -692,6 +716,31 @@ async function startServer() {
     }
   });
 
+  app.post("/api/manager/users/bulk-delete", authenticateToken, requireManager, async (req: any, res) => {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "Nenhum ID fornecido." });
+    }
+    
+    // Check if user is trying to delete themselves
+    if (ids.includes(req.user.id)) {
+      return res.status(400).json({ error: "Você não pode deletar sua própria conta em massa." });
+    }
+
+    try {
+      // In a real app with many users, we'd use 'WHERE user_id IN (...)'
+      // For simplicity and to reuse the logic that deletes goals/txs:
+      for (const id of ids) {
+        await query("DELETE FROM transactions WHERE user_id = ?", [id]);
+        await query("DELETE FROM goals WHERE user_id = ?", [id]);
+        await query("DELETE FROM users WHERE id = ?", [id]);
+      }
+      res.json({ success: true, message: `${ids.length} usuários removidos.` });
+    } catch (error) {
+      res.status(500).json({ error: "Erro na exclusão em massa." });
+    }
+  });
+
   // Maintenance: Update any user account
   app.patch("/api/manager/users/:id/maintenance", authenticateToken, requireManager, async (req: any, res) => {
     const { name, email, password } = req.body;
@@ -744,7 +793,7 @@ async function startServer() {
     // 1. Try Gemini first
     if (GEMINI_API_KEY) {
       try {
-        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
         
         const contents = history.map(h => ({
           role: h.role,
@@ -853,25 +902,31 @@ async function startServer() {
            - Se um gasto em uma categoria estiver 20% acima da média, avise proativamente: "Você está 20% acima da sua média em [CATEGORIA] este mês."
         4. Planejamento: Sugira ajustes no orçamento baseados no histórico, não apenas em metas de longo prazo.
 
-        PARSER DE NOTIFICAÇÕES:
-        Se o usuário colar um texto que pareça uma notificação de banco (ex: "Compra aprovada no seu Nubank de R$ 50,00 em Posto Ipiranga 10x de R$ 5,00"), sua missão é:
-        - Extrair: Valor Total, Estabelecimento, Número de Parcelas (se houver) e sugerir uma Categoria.
-        - Responder: "Detectei uma nova despesa: R$ 50,00 no Posto Ipiranga (Transporte) em 10x. Deseja registrar?"
-        - REGRA TÉCNICA: Se detectar uma transação, você DEVE acrescentar no final da sua resposta o marcador: 
-          [TRANSACTION_DATA:{"amount":50.00,"description":"Posto Ipiranga","category":"Transporte","type":"expense","installments":10,"is_refund":false}]
-          (Substitua os valores pelos dados reais. Se não houver parcelas, use "installments":1).
+        GERENCIAMENTO DE TRANSAÇÕES (INCLUSÃO E EXCLUSÃO):
+        1. INCLUSÃO MANUAL OU NOTIFICAÇÃO:
+           Se o usuário descrever um gasto/ganho ou colar uma notificação (ex: "Gastei 50 no mercado", "Recebi 1000 de salário", "Compra de 30 no Nubank"):
+           - Extrair: Valor, Descrição, Categoria sugerida e Tipo (expense ou income).
+           - Responder: "Detectei uma transação: [VALOR] em [DESCRIÇÃO] ([CATEGORIA]). Deseja registrar?"
+           - REGRA TÉCNICA: Sempre anexe o marcador no final:
+             [TRANSACTION_DATA:{"amount":50.00,"description":"Mercado","category":"Alimentação","type":"expense","installments":1}]
+        
+        2. EXCLUSÃO/APAGAR:
+           Se o usuário pedir para apagar ou deletar (ex: "Apague meus gastos", "Limpar histórico", "Delete a compra de ontem"):
+           - Para APAGAR TUDO:
+             - Responder: "Você tem certeza que deseja apagar TODAS as suas transações? Esta ação não pode ser desfeita."
+             - REGRA TÉCNICA: [TRANSACTION_DATA:{"action":"delete_all"}]
+           - Para APAGAR ESPECÍFICA:
+             - Use as últimas 30 transações no contexto para encontrar a que mais se aproxima.
+             - Responder: "Encontrei a transação de [VALOR] em [DESCRIÇÃO]. Deseja removê-la?"
+             - REGRA TÉCNICA: [TRANSACTION_DATA:{"action":"delete","id":ID_DA_TRANSACAO}]
 
         ESTORNOS E CANCELAMENTOS:
-        Se a notificação for de estorno, devolução ou cancelamento (ex: "Estorno de R$ 50,00 aprovado", "Compra cancelada na Loja X"):
-        - Extrair: Valor e o Estabelecimento.
-        - Responder: "Recebi o aviso de estorno de R$ 50,00 na Loja X. Vou cancelar o registro desse gasto para você."
-        - REGRA TÉCNICA: Use o marcador com "is_refund": true e type "expense":
+        Se a notificação for de estorno, devolução ou cancelamento:
+        - REGRA TÉCNICA: Use o marcador com "is_refund": true.
           [TRANSACTION_DATA:{"amount":50.00,"description":"Loja X","category":"Estorno","type":"expense","installments":1,"is_refund":true}]
 
-        TRANSAÇÕES NEGADAS OU NÃO AUTORIZADAS:
-        Se a notificação indicar que a compra NÃO foi autorizada, foi negada, não realizada ou por falta de saldo (ex: "Compra não autorizada", "Compra negada", "Saldo insuficiente", "Transação não realizada"):
-        - NÃO gere o marcador [TRANSACTION_DATA].
-        - Responda apenas informando que detectou a tentativa de compra, mas como ela foi negada/não autorizada pelo banco, o SUEVO não realizará o lançamento.
+        TRANSAÇÕES NEGADAS:
+        - NÃO gere o marcador [TRANSACTION_DATA]. Informe apenas que a tentativa foi detectada mas não será registrada.
 
         IMPORTANTE: Use o contexto das últimas 30 transações para calcular as médias de cada categoria antes de dar um insight.
       `;
@@ -953,11 +1008,13 @@ async function startServer() {
     });
   }
 
-    await setupTables();
+  await setupTables();
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`\n✅ SUEVO ONLINE EM: http://0.0.0.0:${PORT}\n`);
-  });
+  if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`\n✅ SUEVO ONLINE EM: http://0.0.0.0:${PORT}\n`);
+    });
+  }
 }
 
 startServer().catch(err => {

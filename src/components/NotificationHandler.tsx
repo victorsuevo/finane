@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { NotificationsListener } from 'capacitor-notifications-listener';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
 import { useAuth } from '../contexts/AuthContext';
 import { chatWithAssistant } from '../services/geminiService';
 import { getApiUrl } from '../lib/api';
@@ -9,7 +10,7 @@ export default function NotificationHandler({ onRefresh }: { onRefresh: () => vo
   const { token, user } = useAuth();
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || Capacitor.getPlatform() !== 'android') return;
 
     const startListening = async () => {
       try {
@@ -106,7 +107,7 @@ export default function NotificationHandler({ onRefresh }: { onRefresh: () => vo
       }
     };
 
-    startListening();
+    startListening(); 
 
     return () => {
       NotificationsListener.removeAllListeners();

@@ -23,13 +23,14 @@ interface Stats {
 }
 
 export default function ManagerPanel({ onClose }: { onClose: () => void }) {
-  const { token } = useAuth();
+  const { token, user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<UserRecord | null>(null);
   const [editForm, setEditForm] = useState({ name: '', email: '', password: '' });
   const [saving, setSaving] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
 
   const fetchData = async () => {
     setLoading(true);
@@ -90,6 +91,45 @@ export default function ManagerPanel({ onClose }: { onClose: () => void }) {
     fetchData();
   };
 
+  const toggleSelectAll = () => {
+    const selectableUsers = users.filter(u => Number(u.id) !== 1 && (currentUser ? Number(u.id) !== Number(currentUser.id) : true));
+    if (selectedUsers.size === selectableUsers.length && selectableUsers.length > 0) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(selectableUsers.map(u => u.id)));
+    }
+  };
+
+  const toggleUserSelection = (id: number) => {
+    const newSelection = new Set(selectedUsers);
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+    } else {
+      newSelection.add(id);
+    }
+    setSelectedUsers(newSelection);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedUsers.size === 0) return;
+    if (!confirm(`Deseja deletar ${selectedUsers.size} usuários selecionados e todos os seus dados?`)) return;
+    
+    setSaving(true);
+    try {
+      await fetch(getApiUrl('/api/manager/users/bulk-delete'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ ids: Array.from(selectedUsers) }),
+      });
+      setSelectedUsers(new Set());
+      fetchData();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -139,10 +179,30 @@ export default function ManagerPanel({ onClose }: { onClose: () => void }) {
           )}
 
           {/* Users Table */}
-          <div className="space-y-2">
-            <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">
-              Usuários Cadastrados ({users.length})
-            </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">
+                Usuários Cadastrados ({users.length})
+              </h3>
+              {selectedUsers.size > 0 && (
+                <button 
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-500/20 active:scale-95 transition-all"
+                >
+                  <Trash2 size={12} /> Apagar ({selectedUsers.size})
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 px-1">
+              <input 
+                type="checkbox" 
+                checked={users.length > 0 && selectedUsers.size === users.filter(u => Number(u.id) !== 1 && (currentUser ? Number(u.id) !== Number(currentUser.id) : true)).length}
+                onChange={toggleSelectAll}
+                className="w-4 h-4 rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Todos (exceto mestre)</span>
+            </div>
             {loading ? (
               <div className="text-center py-8 text-slate-300">Carregando...</div>
             ) : (
@@ -150,8 +210,20 @@ export default function ManagerPanel({ onClose }: { onClose: () => void }) {
                 {users.map(u => {
                   const isManager = !!(u.is_manager);
                   return (
-                    <div key={u.id} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isManager ? 'bg-amber-50 border-amber-100' : 'bg-slate-50 border-slate-100'}`}>
+                    <div key={u.id} className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${isManager ? 'bg-amber-50 border-amber-100' : 'bg-slate-50 border-slate-100'} ${selectedUsers.has(u.id) ? 'ring-2 ring-indigo-500 ring-offset-2' : ''}`}>
                       <div className="flex items-center gap-3">
+                        {Number(u.id) !== 1 && (currentUser ? Number(u.id) !== Number(currentUser.id) : true) ? (
+                          <input 
+                            type="checkbox" 
+                            checked={selectedUsers.has(u.id)}
+                            onChange={() => toggleUserSelection(u.id)}
+                            className="w-4 h-4 rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                        ) : (
+                          <div className="w-4 h-4 flex items-center justify-center">
+                            <Shield size={12} className="text-amber-500" />
+                          </div>
+                        )}
                         <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-[10px] font-black ${isManager ? 'bg-amber-200 text-amber-800' : 'bg-slate-200 text-slate-600'}`}>
                           {u.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                         </div>
@@ -174,19 +246,24 @@ export default function ManagerPanel({ onClose }: { onClose: () => void }) {
                         >
                           <Pencil size={14} />
                         </button>
-                        <button
-                          onClick={() => handlePromote(u.id, !isManager)}
-                          title={isManager ? 'Rebaixar' : 'Promover a Gestor'}
-                          className={`p-2 rounded-xl transition-colors text-xs font-bold ${isManager ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
-                        >
-                          {isManager ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-                        </button>
-                        <button
-                          onClick={() => handleDelete(u.id, u.name)}
-                          className="p-2 bg-rose-50 text-rose-400 hover:bg-rose-100 hover:text-rose-600 rounded-xl transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        
+                        {Number(u.id) !== 1 && (currentUser ? Number(u.id) !== Number(currentUser.id) : true) && (
+                          <>
+                            <button
+                              onClick={() => handlePromote(u.id, !isManager)}
+                              title={isManager ? 'Rebaixar' : 'Promover a Gestor'}
+                              className={`p-2 rounded-xl transition-colors text-xs font-bold ${isManager ? 'bg-amber-100 text-amber-600 hover:bg-amber-200' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
+                            >
+                              {isManager ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(u.id, u.name)}
+                              className="p-2 bg-rose-50 text-rose-400 hover:bg-rose-100 hover:text-rose-600 rounded-xl transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   );

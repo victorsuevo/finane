@@ -139,32 +139,55 @@ export default function ChatAssistant({ transactions, goals = [], onRefresh }: P
     try {
       const token = localStorage.getItem("finane_token")?.replace(/^"(.*)"$/, '$1');
       
-      if (data.is_refund) {
-        // Lógica de Estorno via Chat
-        const resList = await fetch(getApiUrl("/api/transactions"), {
+      // Ação de Deletar TUDO
+      if (data.action === 'delete_all') {
+        const res = await fetch(getApiUrl("/api/transactions"), {
+          method: "DELETE",
           headers: { "Authorization": `Bearer ${token}` }
         });
-        const transactions = await resList.json();
-        const target = transactions.find((t: any) => 
-          t.amount === data.amount && 
-          t.type === 'expense' &&
-          (t.description.toLowerCase().includes(data.description.toLowerCase()) || 
-           data.description.toLowerCase().includes(t.description.toLowerCase()))
-        );
-
-        if (target) {
-          await fetch(getApiUrl(`/api/transactions/${target.id}`), {
-            method: "DELETE",
-            headers: { "Authorization": `Bearer ${token}` }
-          });
-          setMessages(prev => prev.map((m, i) => i === msgIndex ? { ...m, transactionData: null, text: m.text + "\n\n✅ **Estorno realizado: Gasto original removido!**" } : m));
+        if (res.ok) {
+          setMessages(prev => prev.map((m, i) => i === msgIndex ? { ...m, transactionData: null, text: m.text + "\n\n✅ **Todas as transações foram removidas com sucesso!**" } : m));
           if (onRefresh) onRefresh();
         } else {
-          setMessages(prev => prev.map((m, i) => i === msgIndex ? { ...m, transactionData: null, text: m.text + "\n\n❌ **Nenhuma transação correspondente encontrada para estornar.**" } : m));
+          setMessages(prev => prev.map((m, i) => i === msgIndex ? { ...m, transactionData: null, text: m.text + "\n\n❌ **Erro ao tentar remover as transações.**" } : m));
         }
         return;
       }
 
+      // Ação de Deletar ESPECÍFICA (via ID ou is_refund search)
+      if (data.action === 'delete' || data.is_refund) {
+        let targetId = data.id;
+
+        if (!targetId) {
+          // Busca manual se não tiver ID (legado/fallback)
+          const resList = await fetch(getApiUrl("/api/transactions"), {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          const transactions = await resList.json();
+          const target = transactions.find((t: any) => 
+            t.amount === data.amount && 
+            t.type === 'expense' &&
+            (t.description.toLowerCase().includes(data.description.toLowerCase()) || 
+             data.description.toLowerCase().includes(t.description.toLowerCase()))
+          );
+          targetId = target?.id;
+        }
+
+        if (targetId) {
+          await fetch(getApiUrl(`/api/transactions/${targetId}`), {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          const successMsg = data.is_refund ? "Estorno realizado: Gasto original removido!" : "Transação removida com sucesso!";
+          setMessages(prev => prev.map((m, i) => i === msgIndex ? { ...m, transactionData: null, text: m.text + `\n\n✅ **${successMsg}**` } : m));
+          if (onRefresh) onRefresh();
+        } else {
+          setMessages(prev => prev.map((m, i) => i === msgIndex ? { ...m, transactionData: null, text: m.text + "\n\n❌ **Nenhuma transação correspondente encontrada.**" } : m));
+        }
+        return;
+      }
+
+      // Inclusão de Transação (Padrão)
       const res = await fetch(getApiUrl("/api/transactions"), {
         method: "POST",
         headers: {
