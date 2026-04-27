@@ -85,7 +85,7 @@ export default function TransactionList({ transactions, onDelete, onEdit, totalI
       <div className="flex flex-col gap-4 sticky top-16 bg-slate-50/90 dark:bg-black/90 backdrop-blur-md py-2 z-30">
         <div className="flex p-1 bg-slate-200/50 dark:bg-slate-800/50 rounded-xl">
           <button onClick={() => setFilter('all')} className={cn("flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all", filter === 'all' ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm" : "text-slate-400")}>Todos</button>
-          <button onClick={() => setFilter('income')} className={cn("flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all", filter === 'income' ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400")}>Entradas</button>
+          <button onClick={() => setFilter('income')} className={cn("flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all", filter === 'income' ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400")}>💰 Entradas</button>
           <button onClick={() => setFilter('expense')} className={cn("flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all", filter === 'expense' ? "bg-rose-500 text-white shadow-sm" : "text-slate-400")}>Saídas</button>
         </div>
         
@@ -181,7 +181,7 @@ export default function TransactionList({ transactions, onDelete, onEdit, totalI
                       <div className="flex items-center gap-3">
                         <div className="flex flex-col items-end gap-1">
                           <span className={cn("text-xs font-black tracking-tighter", t.type === 'income' ? "text-emerald-600" : "text-rose-600")}>
-                            {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
+                            {t.type === 'income' ? '💰 +' : '-'} {formatCurrency(t.amount)}
                           </span>
                           {t.type === 'expense' && totalIncome > 0 && (
                             <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-1 rounded">

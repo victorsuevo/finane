@@ -280,7 +280,7 @@ export default function App() {
             onClick={() => { setFormType('income'); setEditTx(null); setShowForm(true); }}
             className="bg-emerald-50 dark:bg-emerald-950/30 p-3 rounded-[1.5rem] border border-emerald-100/50 dark:border-emerald-900/30 cursor-pointer shadow-sm hover:shadow-md transition-all"
           >
-            <p className="text-[8px] text-emerald-600 dark:text-emerald-400 font-black uppercase mb-1 tracking-widest">Entradas</p>
+            <p className="text-[8px] text-emerald-600 dark:text-emerald-400 font-black uppercase mb-1 tracking-widest">💰 Entradas</p>
             <p className="text-sm font-black text-emerald-700 dark:text-emerald-300 tracking-tight">{formatCurrency(monthIncome)}</p>
           </motion.div>
           <motion.div 
