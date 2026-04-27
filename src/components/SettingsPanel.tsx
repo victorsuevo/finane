@@ -12,6 +12,7 @@ export default function SettingsPanel({ onClose }: Props) {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('finane_theme') === 'dark');
   const [currency, setCurrency] = useState(() => localStorage.getItem('app_currency') || 'BRL');
   const [name, setName] = useState(user?.name || '');
+  const [autoRegister, setAutoRegister] = useState(() => localStorage.getItem('suevo_auto_register') === 'true');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export default function SettingsPanel({ onClose }: Props) {
       
       localStorage.setItem('app_currency', currency);
       localStorage.setItem('app_currency_rate', rate.toString());
+      localStorage.setItem('suevo_auto_register', autoRegister.toString());
 
       if (name !== user?.name) {
         // Need a profile update endpoint or just update local if no endpoint
@@ -127,6 +129,25 @@ export default function SettingsPanel({ onClose }: Props) {
               >
                 <Moon size={16} /> Escuro
               </button>
+            </div>
+          </div>
+
+          {/* AI Settings */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+              Assistente IA
+            </label>
+            <div 
+              onClick={() => setAutoRegister(!autoRegister)}
+              className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 rounded-xl cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            >
+              <div className="space-y-0.5">
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Auto-Lançamento</p>
+                <p className="text-[10px] text-slate-500">Registrar gastos sem perguntar</p>
+              </div>
+              <div className={`w-10 h-5 rounded-full transition-colors relative ${autoRegister ? 'bg-purple-600' : 'bg-slate-400'}`}>
+                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${autoRegister ? 'right-1' : 'left-1'}`} />
+              </div>
             </div>
           </div>
         </div>

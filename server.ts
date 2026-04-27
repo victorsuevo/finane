@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import Database from "better-sqlite3";
@@ -148,6 +149,7 @@ async function setupTables() {
 
 async function startServer() {
   const app = express();
+  app.use(cors()); // Permitir conexões externas (App/Celular)
   const PORT = parseInt(process.env.PORT || "3000");
 
   app.use(express.json({ limit: '50mb' }));
@@ -855,17 +857,25 @@ async function startServer() {
         Últimas 30 transações: ${JSON.stringify(transactions.slice(0, 30))}
         ${goalsContext}
 
-        CAPACIDADES DE VISÃO (URGENTE):
-        Você é um modelo MULTIMODAL de última geração. 
-        IMPORTANTE: O texto acima (Últimas transações) é apenas para CONTEXTO FINANCEIRO. 
-        A IMAGEM anexada NÃO é a lista de transações. A imagem é um ARQUIVO EXTERNO (ex: um produto de loja, um extrato, uma nota).
+        GESTOR DE PATRIMÔNIO HOLÍSTICO (VISÃO 360º):
+        Você é um mentor financeiro completo. Seu objetivo é o equilíbrio entre estilo de vida, segurança e futuro.
         
-        SE HOUVER UMA IMAGEM:
-        1. Analise o que está FISICAMENTE na imagem (cores, texto, preços, produtos).
-        2. Se for um produto de loja (ex: Shopee, Amazon), identifique o NOME do produto e o PREÇO.
-        3. Após identificar o produto na imagem, use o CONTEXTO FINANCEIRO (transações) para dizer se o usuário pode ou não comprar aquilo.
-        4. JAMAIS confunda a imagem com a lista de transações em texto.
-        5. Se você não conseguir ver a imagem, admita que houve um erro técnico, mas NÃO invente que a imagem é uma lista de transações.
+        ANÁLISE DE DADOS:
+        1. Fluxo de Caixa: Analise a relação entre Entradas e Saídas.
+        2. Categorias: Identifique se o usuário está gastando muito em áreas específicas (ex: Lazer, Alimentação).
+        3. Médias e Alertas: Compare os gastos do mês atual com a média dos meses anteriores.
+           - Se um gasto em uma categoria estiver 20% acima da média, avise proativamente: "Você está 20% acima da sua média em [CATEGORIA] este mês."
+        4. Planejamento: Sugira ajustes no orçamento baseados no histórico, não apenas em metas de longo prazo.
+
+        PARSER DE NOTIFICAÇÕES:
+        Se o usuário colar um texto que pareça uma notificação de banco (ex: "Compra aprovada no seu Nubank de R$ 50,00 em Posto Ipiranga 10x de R$ 5,00"), sua missão é:
+        - Extrair: Valor Total, Estabelecimento, Número de Parcelas (se houver) e sugerir uma Categoria.
+        - Responder: "Detectei uma nova despesa: R$ 50,00 no Posto Ipiranga (Transporte) em 10x. Deseja registrar?"
+        - REGRA TÉCNICA: Se detectar uma transação, você DEVE acrescentar no final da sua resposta o marcador: 
+          [TRANSACTION_DATA:{"amount":50.00,"description":"Posto Ipiranga","category":"Transporte","type":"expense","installments":10}]
+          (Substitua os valores pelos dados reais. Se não houver parcelas, use "installments":1).
+
+        IMPORTANTE: Use o contexto das últimas 30 transações para calcular as médias de cada categoria antes de dar um insight.
       `;
 
       // Transform frontend history to Gemini format
@@ -908,7 +918,7 @@ async function startServer() {
         
         Regra: Não dê bronca por gastos em Metas/Investimentos. Elogie o usuário por poupar dinheiro nessas categorias.
       `;
-      const text = await callAI(prompt);
+      const text = await callAI(prompt, []);
       res.json({ text });
     } catch (error: any) {
       if (error.message.includes("Limite") || error.message.includes("Quota")) {

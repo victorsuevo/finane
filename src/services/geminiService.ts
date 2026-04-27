@@ -1,4 +1,5 @@
 import { Transaction, Goal } from "../types";
+import { getApiUrl } from "../lib/api";
 
 export async function getFinancialInsights(transactions: Transaction[], goals: Goal[] = [], userName?: string) {
   try {
@@ -6,7 +7,7 @@ export async function getFinancialInsights(transactions: Transaction[], goals: G
     if (!token) return "Você precisa estar logado para ver insights.";
     
     token = token.replace(/^"(.*)"$/, '$1');
-    const res = await fetch("/api/ai/insights", {
+    const res = await fetch(getApiUrl("/api/ai/insights"), {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -34,7 +35,7 @@ export async function chatWithAssistant(
     if (!token) return { error: "Sessão expirada", details: "Token não encontrado no navegador." };
     
     token = token.replace(/^"(.*)"$/, '$1');
-    const res = await fetch("/api/ai/chat", {
+    const res = await fetch(getApiUrl("/api/ai/chat"), {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',

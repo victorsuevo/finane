@@ -1,23 +1,26 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, Bot, User, Loader2, Paperclip, FileText, Image as ImageIcon } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, Loader2, Paperclip, FileText, Image as ImageIcon, Check } from 'lucide-react';
 import { Transaction, Goal } from '../types';
 import { chatWithAssistant } from '../services/geminiService';
 import { cn } from '../lib/utils';
+import { getApiUrl } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Message {
   role: 'assistant' | 'user';
   text: string;
+  transactionData?: any; // Dados para o botão de confirmação
 }
 
 interface Props {
   transactions: Transaction[];
   goals?: Goal[];
+  onRefresh?: () => void;
 }
 
-export default function ChatAssistant({ transactions, goals = [] }: Props) {
+export default function ChatAssistant({ transactions, goals = [], onRefresh }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -58,6 +61,7 @@ export default function ChatAssistant({ transactions, goals = [] }: Props) {
     const response = await chatWithAssistant(userMsg || "Analise este arquivo", messages, transactions, goals, user?.name, fileToSend);
     
     if (typeof response === 'object' && 'error' in response) {
+      // ... erro handling ...
       const isExpired = response.error?.toLowerCase().includes("expira") || 
                         response.details?.toLowerCase().includes("expira");
 
@@ -68,9 +72,60 @@ export default function ChatAssistant({ transactions, goals = [] }: Props) {
         setMessages(prev => [...prev, { role: 'assistant', text: `Erro: ${response.details || response.error}` }]);
       }
     } else {
-      setMessages(prev => [...prev, { role: 'assistant', text: response || 'Desculpe, não consegui processar isso.' }]);
+      let cleanText = response || 'Desculpe, não consegui processar isso.';
+      let txData = null;
+
+      // Detectar o marcador [TRANSACTION_DATA:...]
+      const match = cleanText.match(/\[TRANSACTION_DATA:(.*?)\]/);
+      if (match) {
+        try {
+          txData = JSON.parse(match[1]);
+          cleanText = cleanText.replace(/\[TRANSACTION_DATA:.*?\]/, '').trim();
+        } catch (e) {
+          console.error("Erro ao parsear dados da transação:", e);
+        }
+      }
+
+      const newMsg: Message = { 
+        role: 'assistant', 
+        text: cleanText,
+        transactionData: txData
+      };
+
+      setMessages(prev => [...prev, newMsg]);
+
+      // Se auto-lançamento estiver ativado, disparar agora de forma segura fora do setter
+      const isAuto = localStorage.getItem('suevo_auto_register') === 'true';
+      if (txData && isAuto) {
+        setTimeout(() => handleConfirmTransaction(txData, messages.length + 1), 100);
+      }
     }
     setLoading(false);
+  };
+
+  const handleConfirmTransaction = async (data: any, msgIndex: number) => {
+    try {
+      const token = localStorage.getItem("finane_token")?.replace(/^"(.*)"$/, '$1');
+      const res = await fetch(getApiUrl("/api/transactions"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ...data,
+          date: new Date().toISOString().split('T')[0] // Data de hoje
+        })
+      });
+
+      if (res.ok) {
+        // Remover o botão após confirmar
+        setMessages(prev => prev.map((m, i) => i === msgIndex ? { ...m, transactionData: null, text: m.text + "\n\n✅ **Lançamento registrado com sucesso!**" } : m));
+        if (onRefresh) onRefresh();
+      }
+    } catch (error) {
+      console.error("Erro ao registrar:", error);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,22 +180,49 @@ export default function ChatAssistant({ transactions, goals = [] }: Props) {
 
             {/* Messages Area */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 dark:bg-slate-900/50">
-              {messages.map((msg, i) => (
-                <div key={i} className={cn("flex gap-2 max-w-[85%]", msg.role === 'user' ? "ml-auto flex-row-reverse" : "")}>
-                  <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-1",
-                    msg.role === 'assistant' ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400" : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                  )}>
-                    {msg.role === 'assistant' ? <Bot size={14} /> : <User size={14} />}
+              {(messages || []).map((msg, i) => {
+                if (!msg || !msg.text) return null;
+                
+                return (
+                  <div key={i} className={cn("flex gap-2 max-w-[85%]", msg.role === 'user' ? "ml-auto flex-row-reverse" : "")}>
+                    <div className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-1",
+                      msg.role === 'assistant' ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400" : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                    )}>
+                      {msg.role === 'assistant' ? <Bot size={14} /> : <User size={14} />}
+                    </div>
+                    <div className={cn(
+                      "p-3 rounded-2xl text-[11px] leading-relaxed shadow-sm prose prose-sm max-w-none prose-p:my-0 prose-strong:font-bold prose-headings:text-sm prose-headings:my-1",
+                      msg.role === 'assistant' ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 prose-slate dark:prose-invert" : "bg-indigo-600 text-white prose-invert"
+                    )}>
+                      <ReactMarkdown>{String(msg.text || "")}</ReactMarkdown>
+                      
+                      {msg.transactionData && (
+                        <div className="mt-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700 not-prose">
+                          <p className="text-[10px] font-black uppercase text-slate-400 mb-2">Confirmar Lançamento?</p>
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                {msg.transactionData.description || 'Nova Transação'}
+                                {msg.transactionData.installments > 1 && ` (${msg.transactionData.installments}x)`}
+                              </p>
+                              <p className="text-[10px] text-indigo-600 font-bold">
+                                {((msg.transactionData.amount) ? Number(msg.transactionData.amount) : 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                              </p>
+                            </div>
+                            <button 
+                              onClick={() => handleConfirmTransaction(msg.transactionData, i)}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 flex-shrink-0"
+                            >
+                              <Check size={12} /> Confirmar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className={cn(
-                    "p-3 rounded-2xl text-[11px] leading-relaxed shadow-sm prose prose-sm max-w-none prose-p:my-0 prose-strong:font-bold prose-headings:text-sm prose-headings:my-1",
-                    msg.role === 'assistant' ? "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 prose-slate dark:prose-invert" : "bg-indigo-600 text-white prose-invert"
-                  )}>
-                    <ReactMarkdown>{msg.text}</ReactMarkdown>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {loading && (
                 <div className="flex gap-2">
                   <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center animate-pulse">

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SUEVO</string>
+    <string name="title_activity_main">SUEVO</string>
+    <string name="package_name">com.suevo.app</string>
+    <string name="custom_url_scheme">com.suevo.app</string>
+</resources>

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Wallet, LogOut, ChevronLeft, ChevronRight, Save, Check, Crown, Search } from 'lucide-react';
 import { Transaction, Goal, Investment } from './types';
 import { formatCurrency, cn } from './lib/utils';
+import { getApiUrl } from './lib/api';
 import { format, subMonths, addMonths, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import TransactionList from './components/TransactionList';
@@ -13,6 +14,7 @@ import TransactionForm from './components/TransactionForm';
 import GoalList from './components/GoalList';
 import GoalForm from './components/GoalForm';
 import InvestmentPortfolio from './components/InvestmentPortfolio';
+import NotificationHandler from './components/NotificationHandler';
 import InvestmentForm from './components/InvestmentForm';
 import ManagerPanel from './components/ManagerPanel';
 import SettingsPanel from './components/SettingsPanel';
@@ -25,9 +27,18 @@ import { useAuth } from './contexts/AuthContext';
 
 export default function App() {
   const { user, token, logout, isLoading: authLoading } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    const saved = localStorage.getItem('suevo_cache_transactions');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [goals, setGoals] = useState<Goal[]>(() => {
+    const saved = localStorage.getItem('suevo_cache_goals');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [investments, setInvestments] = useState<Investment[]>(() => {
+    const saved = localStorage.getItem('suevo_cache_investments');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), 'yyyy-MM'));
   
   // Modais
@@ -62,16 +73,26 @@ export default function App() {
     if (!token) return;
     try {
       const [tRes, gRes, iRes] = await Promise.all([
-        fetch('/api/transactions', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/goals', { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch('/api/investments', { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(getApiUrl('/api/transactions'), { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(getApiUrl('/api/goals'), { headers: { 'Authorization': `Bearer ${token}` } }),
+        fetch(getApiUrl('/api/investments'), { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       const tData = await tRes.json();
       const gData = await gRes.json();
       const iData = await iRes.json();
-      setTransactions(Array.isArray(tData) ? tData : []);
-      setGoals(Array.isArray(gData) ? gData : []);
-      setInvestments(Array.isArray(iData) ? iData : []);
+      
+      const finalT = Array.isArray(tData) ? tData : [];
+      const finalG = Array.isArray(gData) ? gData : [];
+      const finalI = Array.isArray(iData) ? iData : [];
+
+      setTransactions(finalT);
+      setGoals(finalG);
+      setInvestments(finalI);
+
+      // Atualizar Cache Offline
+      localStorage.setItem('suevo_cache_transactions', JSON.stringify(finalT));
+      localStorage.setItem('suevo_cache_goals', JSON.stringify(finalG));
+      localStorage.setItem('suevo_cache_investments', JSON.stringify(finalI));
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     }
@@ -91,7 +112,7 @@ export default function App() {
   const handleDeleteTx = async () => {
     if (!deleteTx || !deleteTx.id) return;
     try {
-      const res = await fetch(`/api/transactions/${deleteTx.id}`, {
+      const res = await fetch(getApiUrl(`/api/transactions/${deleteTx.id}`), {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -107,7 +128,7 @@ export default function App() {
   const handlePrevMonth = () => setSelectedMonth(prev => format(subMonths(parseISO(`${prev}-01`), 1), 'yyyy-MM'));
   const handleNextMonth = () => setSelectedMonth(prev => format(addMonths(parseISO(`${prev}-01`), 1), 'yyyy-MM'));
 
-  const monthTransactions = transactions.filter(t => t?.date?.startsWith(selectedMonth));
+  const monthTransactions = transactions.filter(t => t && t.date && t.date.startsWith(selectedMonth));
   const monthIncome = monthTransactions.filter(t => t.type === 'income').reduce((s, t) => s + (t.amount || 0), 0);
   const monthExpense = monthTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount || 0), 0);
   const monthBalance = monthIncome - monthExpense;
@@ -119,22 +140,24 @@ export default function App() {
   const monthGoals = goals.map(g => {
     const totalTransactionsSum = transactions
       .filter(t => {
-        const goalIdMatch = Number(t.goal_id) === Number(g.id);
-        const nameMatch = !t.goal_id && t.category.trim().toLowerCase() === g.name.trim().toLowerCase();
+        if (!t) return false;
+        const goalIdMatch = t.goal_id && Number(t.goal_id) === Number(g.id);
+        const nameMatch = !t.goal_id && t.category && g.name && t.category.trim().toLowerCase() === g.name.trim().toLowerCase();
         return goalIdMatch || nameMatch;
       })
-      .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
+      .reduce((sum, t) => sum + (t.type === 'expense' ? (t.amount || 0) : -(t.amount || 0)), 0);
     
     const initialBalance = g.current_amount - totalTransactionsSum;
     
     const untilMonthTransactions = transactions
       .filter(t => {
-        const goalIdMatch = Number(t.goal_id) === Number(g.id);
-        const nameMatch = !t.goal_id && t.category.trim().toLowerCase() === g.name.trim().toLowerCase();
+        if (!t || !t.date) return false;
+        const goalIdMatch = t.goal_id && Number(t.goal_id) === Number(g.id);
+        const nameMatch = !t.goal_id && t.category && g.name && t.category.trim().toLowerCase() === g.name.trim().toLowerCase();
         const dateMatch = t.date.substring(0, 7) <= selectedMonth;
         return (goalIdMatch || nameMatch) && dateMatch;
       })
-      .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
+      .reduce((sum, t) => sum + (t.type === 'expense' ? (t.amount || 0) : -(t.amount || 0)), 0);
 
     return { ...g, current_amount: Math.max(0, initialBalance + untilMonthTransactions) };
   });
@@ -142,22 +165,24 @@ export default function App() {
   const monthInvestments = investments.map(inv => {
     const totalTransactionsSum = transactions
       .filter(t => {
-        const investIdMatch = Number(t.investment_id) === Number(inv.id);
-        const nameMatch = !t.investment_id && t.category.trim().toLowerCase() === inv.name.trim().toLowerCase();
+        if (!t) return false;
+        const investIdMatch = t.investment_id && Number(t.investment_id) === Number(inv.id);
+        const nameMatch = !t.investment_id && t.category && inv.name && t.category.trim().toLowerCase() === inv.name.trim().toLowerCase();
         return investIdMatch || nameMatch;
       })
-      .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
+      .reduce((sum, t) => sum + (t.type === 'expense' ? (t.amount || 0) : -(t.amount || 0)), 0);
     
     const initialBalance = inv.current_amount - totalTransactionsSum;
     
     const untilMonthTransactions = transactions
       .filter(t => {
-        const investIdMatch = Number(t.investment_id) === Number(inv.id);
-        const nameMatch = !t.investment_id && t.category.trim().toLowerCase() === inv.name.trim().toLowerCase();
+        if (!t || !t.date) return false;
+        const investIdMatch = t.investment_id && Number(t.investment_id) === Number(inv.id);
+        const nameMatch = !t.investment_id && t.category && inv.name && t.category.trim().toLowerCase() === inv.name.trim().toLowerCase();
         const dateMatch = t.date.substring(0, 7) <= selectedMonth;
         return (investIdMatch || nameMatch) && dateMatch;
       })
-      .reduce((sum, t) => sum + (t.type === 'expense' ? t.amount : -t.amount), 0);
+      .reduce((sum, t) => sum + (t.type === 'expense' ? (t.amount || 0) : -(t.amount || 0)), 0);
 
     return { ...inv, current_amount: Math.max(0, initialBalance + untilMonthTransactions) };
   });
@@ -166,18 +191,26 @@ export default function App() {
   
   // New: Monthly Investment Contribution (like Entrada/Saída)
   const monthInvestTotal = monthTransactions
-    .filter(t => t.investment_id != null || (t.type === 'expense' && investments.some(inv => inv.name.trim().toLowerCase() === t.category.trim().toLowerCase())))
-    .reduce((s, t) => s + t.amount, 0);
+    .filter(t => t && (t.investment_id != null || (t.type === 'expense' && investments.some(inv => inv.name && t.category && inv.name.trim().toLowerCase() === t.category.trim().toLowerCase()))))
+    .reduce((s, t) => s + (t.amount || 0), 0);
 
   if (authLoading) return null;
   if (!user) return <Login />;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-50 font-sans selection:bg-purple-100 pb-24 transition-colors duration-200">
+      <NotificationHandler onRefresh={fetchData} />
       <header className="fixed top-0 inset-x-0 h-16 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md z-40 px-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-700">
         <div className="flex items-center gap-3">
-          <button onClick={() => setShowSettings(true)} className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20 active:scale-95 transition-transform">
+          <button 
+            onClick={() => setShowSettings(true)} 
+            title="Configurações e Preferências"
+            className="group relative w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20 active:scale-95 transition-all hover:ring-4 hover:ring-purple-500/20"
+          >
             <Wallet className="text-white" size={18} />
+            <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+              Ajustes do App
+            </span>
           </button>
           <h1 className="font-black text-lg tracking-tight uppercase">SUEVO</h1>
           <button onClick={() => setShowHelp(true)} className="w-5 h-5 flex items-center justify-center rounded-full border border-slate-200 dark:border-slate-600 text-[10px] font-black text-slate-400 hover:text-indigo-600 transition-colors">?</button>
@@ -325,7 +358,7 @@ export default function App() {
         <Plus size={28} />
       </motion.button>
 
-      <ChatAssistant transactions={transactions} goals={monthGoals} />
+      <ChatAssistant transactions={transactions} goals={monthGoals} onRefresh={handleAfterAdd} />
 
       {/* Modais */}
       {showForm && (
