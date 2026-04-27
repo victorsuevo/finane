@@ -37,6 +37,43 @@ export default function ChatAssistant({ transactions, goals = [], onRefresh }: P
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Efeito para capturar transações detectadas via Notificação em modo Manual
+  useEffect(() => {
+    const checkPending = () => {
+      const pending = localStorage.getItem('suevo_pending_msg');
+      if (pending) {
+        try {
+          const { text, txData, timestamp } = JSON.parse(pending);
+          // Só processa se for recente (últimos 5 minutos)
+          if (Date.now() - timestamp < 5 * 60 * 1000) {
+            let cleanText = text;
+            let transactionData = txData;
+
+            // Limpeza extra se o texto ainda tiver o marcador
+            const match = cleanText.match(/\[TRANSACTION_DATA:(.*?)\]/);
+            if (match) {
+              cleanText = cleanText.replace(/\[TRANSACTION_DATA:.*?\]/, '').trim();
+            }
+
+            setMessages(prev => [...prev, { 
+              role: 'assistant', 
+              text: cleanText, 
+              transactionData: transactionData 
+            }]);
+            setIsOpen(true); // Abre o chat para o usuário ver
+          }
+        } catch (e) {
+          console.error("Erro ao recuperar mensagem pendente:", e);
+        }
+        localStorage.removeItem('suevo_pending_msg');
+      }
+    };
+
+    checkPending();
+    window.addEventListener('suevo_pending_tx', checkPending);
+    return () => window.removeEventListener('suevo_pending_tx', checkPending);
+  }, []);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
