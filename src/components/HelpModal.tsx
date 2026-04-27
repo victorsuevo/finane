@@ -99,14 +99,32 @@ export default function HelpModal({ isOpen, onClose }: Props) {
                   <h3 className="font-black text-xs uppercase tracking-widest">Inteligência Artificial (Chat)</h3>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  No canto inferior esquerdo, você tem o Assistente SUEVO. Ele conhece todos os seus dados.
+                  No canto inferior esquerdo, você tem o Assistente SUEVO. Ele conhece todos os seus dados e pode até analisar imagens de notas fiscais ou extratos que você enviar.
                 </p>
                 <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
                   <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Exemplos do que perguntar:</p>
                   <ul className="text-[11px] text-slate-500 dark:text-slate-400 space-y-1 italic pl-4">
                     <li>"Quanto eu gastei com mercado nos últimos 3 meses?"</li>
                     <li>"Me dê 3 dicas para sobrar mais dinheiro este mês."</li>
-                    <li>"Qual a minha meta que está mais próxima de ser atingida?"</li>
+                    <li>"Analise esta imagem da fatura e me diga os maiores gastos."</li>
+                  </ul>
+                </div>
+              </section>
+
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 text-blue-600">
+                  <ShieldCheck size={18} />
+                  <h3 className="font-black text-xs uppercase tracking-widest">Automação e Notificações</h3>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  O SUEVO pode ler as notificações do seu banco e automatizar seu controle financeiro de forma inteligente.
+                </p>
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Recursos de Automação:</p>
+                  <ul className="text-[11px] text-slate-500 dark:text-slate-400 space-y-2 list-disc pl-4">
+                    <li><strong>Lançamento Automático:</strong> Detecta compras aprovadas, Pix e transferências, registrando-os ou perguntando se deseja salvar.</li>
+                    <li><strong>Inteligência de Estornos:</strong> Se você receber uma notificação de estorno ou cancelamento, o SUEVO identifica o gasto original e o remove para você automaticamente.</li>
+                    <li><strong>Filtro de Segurança:</strong> Notificações de compras negadas, senhas incorretas ou saldo insuficiente são ignoradas, garantindo que seu extrato contenha apenas transações reais.</li>
                   </ul>
                 </div>
               </section>

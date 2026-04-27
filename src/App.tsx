@@ -204,7 +204,6 @@ export default function App() {
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setShowSettings(true)} 
-            title="Configurações e Preferências"
             className="group relative w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20 active:scale-95 transition-all hover:ring-4 hover:ring-purple-500/20"
           >
             <Wallet className="text-white" size={18} />

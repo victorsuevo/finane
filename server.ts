@@ -882,6 +882,11 @@ async function startServer() {
         - REGRA TÉCNICA: Use o marcador com "is_refund": true e type "expense":
           [TRANSACTION_DATA:{"amount":50.00,"description":"Loja X","category":"Estorno","type":"expense","installments":1,"is_refund":true}]
 
+        TRANSAÇÕES NEGADAS OU NÃO AUTORIZADAS:
+        Se a notificação indicar que a compra NÃO foi autorizada, foi negada, não realizada ou por falta de saldo (ex: "Compra não autorizada", "Compra negada", "Saldo insuficiente", "Transação não realizada"):
+        - NÃO gere o marcador [TRANSACTION_DATA].
+        - Responda apenas informando que detectou a tentativa de compra, mas como ela foi negada/não autorizada pelo banco, o SUEVO não realizará o lançamento.
+
         IMPORTANTE: Use o contexto das últimas 30 transações para calcular as médias de cada categoria antes de dar um insight.
       `;
 
