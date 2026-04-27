@@ -85,7 +85,7 @@ export default function TransactionList({ transactions, onDelete, onEdit, totalI
       <div className="flex flex-col gap-4 sticky top-16 bg-slate-50/90 dark:bg-black/90 backdrop-blur-md py-2 z-30">
         <div className="flex p-1 bg-slate-200/50 dark:bg-slate-800/50 rounded-xl">
           <button onClick={() => setFilter('all')} className={cn("flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all", filter === 'all' ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm" : "text-slate-400")}>Todos</button>
-          <button onClick={() => setFilter('income')} className={cn("flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all", filter === 'income' ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400")}>💰 Entradas</button>
+          <button onClick={() => setFilter('income')} className={cn("flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all", filter === 'income' ? "bg-emerald-500 text-white shadow-sm" : "text-slate-400")}>Entradas</button>
           <button onClick={() => setFilter('expense')} className={cn("flex-1 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all", filter === 'expense' ? "bg-rose-500 text-white shadow-sm" : "text-slate-400")}>Saídas</button>
         </div>
         
@@ -146,7 +146,7 @@ export default function TransactionList({ transactions, onDelete, onEdit, totalI
                     <div key={t.id} className="group flex items-center justify-between p-3 bg-white dark:bg-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-900/50 rounded-2xl transition-all border border-slate-50 dark:border-slate-800">
                       <div className="flex items-center gap-3">
                         <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0", isGoalContrib ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600' : t.type === 'income' ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'bg-slate-100 dark:bg-slate-900/50')}>
-                          {isGoalContrib ? <Target size={18} className="text-indigo-500" /> : getCategoryIcon(t.category)}
+                          {isGoalContrib ? <Target size={18} className="text-indigo-500" /> : t.type === 'income' ? '💰' : getCategoryIcon(t.category)}
                         </div>
                         <div className="min-w-0 relative group/desc">
                           <p 
@@ -181,7 +181,7 @@ export default function TransactionList({ transactions, onDelete, onEdit, totalI
                       <div className="flex items-center gap-3">
                         <div className="flex flex-col items-end gap-1">
                           <span className={cn("text-xs font-black tracking-tighter", t.type === 'income' ? "text-emerald-600" : "text-rose-600")}>
-                            {t.type === 'income' ? '💰 +' : '-'} {formatCurrency(t.amount)}
+                            {t.type === 'income' ? '+' : '-'} {formatCurrency(t.amount)}
                           </span>
                           {t.type === 'expense' && totalIncome > 0 && (
                             <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-1 rounded">
